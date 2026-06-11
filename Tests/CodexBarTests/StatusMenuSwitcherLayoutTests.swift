@@ -6,7 +6,7 @@ import Testing
 @Suite(.serialized)
 struct StatusMenuSwitcherLayoutTests {
     @Test
-    func `overview switcher segment matches provider segment height when quota bars are present`() {
+    func `overview switcher segment matches provider segment height when quota bars are present`() throws {
         let view = ProviderSwitcherView(
             providers: [.claude, .grok, .cursor],
             selected: .overview,
@@ -21,7 +21,7 @@ struct StatusMenuSwitcherLayoutTests {
 
         let frames = view._test_buttonFrames()
         #expect(frames.count == 4)
-        guard let overviewFrame = frames.first else { return }
+        let overviewFrame = try #require(frames.first)
 
         for frame in frames.dropFirst() {
             #expect(frame.height == overviewFrame.height)
