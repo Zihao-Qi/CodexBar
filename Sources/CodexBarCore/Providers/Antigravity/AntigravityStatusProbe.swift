@@ -206,14 +206,8 @@ public struct AntigravityStatusSnapshot: Sendable {
             throw AntigravityStatusProbeError.parseFailed("No quota buckets available")
         }
 
-        let constrainedWindows = namedWindows
-            .filter(\.usageKnown)
-            .sorted { lhs, rhs in
-                if lhs.window.usedPercent != rhs.window.usedPercent {
-                    return lhs.window.usedPercent > rhs.window.usedPercent
-                }
-                return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
-            }
+        let primary = Self.quotaSummaryRepresentative(title: "Gemini", in: namedWindows)
+        let secondary = Self.quotaSummaryRepresentative(title: "Claude + GPT", in: namedWindows)
 
         let identity = ProviderIdentitySnapshot(
             providerID: .antigravity,
@@ -221,12 +215,27 @@ public struct AntigravityStatusSnapshot: Sendable {
             accountOrganization: nil,
             loginMethod: accountPlan)
         return UsageSnapshot(
-            primary: constrainedWindows.first?.window,
-            secondary: constrainedWindows.dropFirst().first?.window,
-            tertiary: constrainedWindows.dropFirst(2).first?.window,
+            primary: primary,
+            secondary: secondary,
+            tertiary: nil,
             extraRateWindows: namedWindows,
             updatedAt: Date(),
             identity: identity)
+    }
+
+    private static func quotaSummaryRepresentative(
+        title: String,
+        in windows: [NamedRateWindow]) -> RateWindow?
+    {
+        windows
+            .filter { $0.usageKnown && $0.title.hasPrefix("\(title) ") }
+            .max { lhs, rhs in
+                if lhs.window.usedPercent != rhs.window.usedPercent {
+                    return lhs.window.usedPercent < rhs.window.usedPercent
+                }
+                return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedDescending
+            }?
+            .window
     }
 
     private static func quotaSummaryWindows(from quotaSummary: AntigravityQuotaSummary) -> [NamedRateWindow] {

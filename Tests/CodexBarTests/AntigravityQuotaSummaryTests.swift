@@ -45,9 +45,9 @@ struct AntigravityQuotaSummaryTests {
         #expect(windows.map(\.window.windowMinutes) == [300, 10080, 300, 10080])
         #expect(windows.map { $0.window.remainingPercent.rounded() } == [91, 82, 73, 64])
         #expect(windows.map(\.usageKnown) == [true, true, true, true])
-        #expect(usage.primary?.remainingPercent.rounded() == 64)
-        #expect(usage.secondary?.remainingPercent.rounded() == 73)
-        #expect(usage.tertiary?.remainingPercent.rounded() == 82)
+        #expect(usage.primary?.remainingPercent.rounded() == 82)
+        #expect(usage.secondary?.remainingPercent.rounded() == 64)
+        #expect(usage.tertiary == nil)
     }
 
     @Test
