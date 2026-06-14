@@ -1453,6 +1453,11 @@ public struct AntigravityStatusProbe: Sendable {
                 context: context,
                 send: send,
                 parse: self.parseQuotaSummaryResponse)
+            guard quotaSummary.quotaSummary?.groups.contains(where: { group in
+                group.buckets.contains { !$0.disabled && $0.remainingFraction != nil }
+            }) == true else {
+                throw AntigravityStatusProbeError.parseFailed("Quota summary has no usable quota buckets")
+            }
             let identity = try? await self.makeParsedRequest(
                 payload: RequestPayload(
                     path: self.getUserStatusPath,

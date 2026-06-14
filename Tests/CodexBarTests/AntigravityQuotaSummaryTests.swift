@@ -158,6 +158,33 @@ struct AntigravityQuotaSummaryTests {
         ])
         #expect(usage.primary?.remainingPercent.rounded() == 90)
     }
+
+    @Test
+    func `fetch snapshot falls back when quota summary has no known usage buckets`() async throws {
+        let endpoint = AntigravityStatusProbe.AntigravityConnectionEndpoint(
+            scheme: "https",
+            port: 64440,
+            csrfToken: "token",
+            source: .languageServer)
+        let paths = AntigravityQuotaSummaryPathRecorder()
+
+        let snapshot = try await AntigravityStatusProbe.fetchSnapshot(
+            context: AntigravityStatusProbe.RequestContext(endpoints: [endpoint], timeout: 1),
+            send: { payload, _, _ in
+                paths.append(payload.path)
+                if payload.path.contains("RetrieveUserQuotaSummary") {
+                    return Data(antigravityQuotaSummaryWithoutKnownUsageJSON().utf8)
+                }
+                return Data(antigravityUserStatusJSON().utf8)
+            })
+        let usage = try snapshot.toUsageSnapshot()
+
+        #expect(paths.snapshot() == [
+            "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary",
+            "/exa.language_server_pb.LanguageServerService/GetUserStatus",
+        ])
+        #expect(usage.primary?.remainingPercent.rounded() == 90)
+    }
 }
 
 private func antigravityQuotaSummaryJSON() -> String {
@@ -199,6 +226,33 @@ private func antigravityQuotaSummaryJSON() -> String {
                 "displayName": "Five Hour Limit",
                 "remaining": { "remainingFraction": 0.73 },
                 "description": "You have used some of your 5-hour limit, it will fully refresh in 3 hours, 38 minutes."
+              }
+            ]
+          }
+        ]
+      }
+    }
+    """
+}
+
+private func antigravityQuotaSummaryWithoutKnownUsageJSON() -> String {
+    """
+    {
+      "response": {
+        "groups": [
+          {
+            "displayName": "Gemini Models",
+            "buckets": [
+              {
+                "bucketId": "gemini-weekly",
+                "displayName": "Weekly Limit",
+                "description": "Refreshes later."
+              },
+              {
+                "bucketId": "gemini-5h",
+                "displayName": "Five Hour Limit",
+                "disabled": true,
+                "remaining": { "remainingFraction": 0.5 }
               }
             ]
           }

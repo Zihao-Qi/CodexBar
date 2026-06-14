@@ -171,6 +171,32 @@ struct AntigravityCLIHTTPSFetchStrategyTests {
         ])
     }
 
+    @Test
+    func `auto strategy pipeline preserves oauth fallback for shared credentials file`() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("antigravity-shared-auto-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = AntigravityOAuthCredentialsStore(
+            fileURL: AntigravityOAuthCredentialsStore.defaultURL(home: root))
+        try store.save(AntigravityOAuthCredentials(
+            accessToken: "access",
+            refreshToken: "refresh",
+            expiryDate: Date().addingTimeInterval(3600),
+            email: "legacy@example.com"))
+
+        let descriptor = ProviderDescriptorRegistry.descriptor(for: .antigravity)
+        let autoStrategies = await descriptor.fetchPlan.pipeline.resolveStrategies(
+            self.makeFetchContext(sourceMode: .auto, env: ["HOME": root.path]))
+
+        #expect(autoStrategies.map(\.id) == [
+            "antigravity.app-local",
+            "antigravity.cli-https",
+            "antigravity.ide-local",
+            "antigravity.oauth",
+        ])
+    }
+
     // MARK: - Selected-account guard
 
     @Test
@@ -770,16 +796,21 @@ struct AntigravityCLIHTTPSFetchStrategyTests {
         persistsCLISessions: Bool = false,
         env: [String: String] = [:]) -> ProviderFetchContext
     {
-        ProviderFetchContext(
+        var effectiveEnv = env
+        effectiveEnv["HOME"] = effectiveEnv["HOME"] ??
+            FileManager.default.temporaryDirectory
+            .appendingPathComponent("codexbar-antigravity-empty-home-\(UUID().uuidString)", isDirectory: true)
+            .path
+        return ProviderFetchContext(
             runtime: runtime,
             sourceMode: sourceMode,
             includeCredits: false,
             webTimeout: 1,
             webDebugDumpHTML: false,
             verbose: false,
-            env: env,
+            env: effectiveEnv,
             settings: nil,
-            fetcher: UsageFetcher(environment: env),
+            fetcher: UsageFetcher(environment: effectiveEnv),
             claudeFetcher: StubClaudeFetcher(),
             browserDetection: BrowserDetection(cacheTTL: 0),
             selectedTokenAccountID: selectedTokenAccountID,

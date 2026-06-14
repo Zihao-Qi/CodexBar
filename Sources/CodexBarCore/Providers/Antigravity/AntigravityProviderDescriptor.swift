@@ -52,7 +52,8 @@ public enum AntigravityProviderDescriptor {
             return [oauth]
         case .auto:
             if context.selectedTokenAccountID != nil ||
-                context.env[AntigravityOAuthCredentialsStore.environmentCredentialsKey] != nil
+                context.env[AntigravityOAuthCredentialsStore.environmentCredentialsKey] != nil ||
+                self.hasSharedOAuthCredentials(context: context)
             {
                 return [app, cli, ide, oauth]
             }
@@ -60,6 +61,14 @@ public enum AntigravityProviderDescriptor {
         case .web, .api:
             return []
         }
+    }
+
+    private static func hasSharedOAuthCredentials(context: ProviderFetchContext) -> Bool {
+        let homeURL = context.env["HOME"]
+            .flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0, isDirectory: true) }
+            ?? FileManager.default.homeDirectoryForCurrentUser
+        let fileURL = AntigravityOAuthCredentialsStore.defaultURL(home: homeURL)
+        return FileManager.default.fileExists(atPath: fileURL.path)
     }
 }
 
