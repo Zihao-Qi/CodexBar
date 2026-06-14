@@ -139,8 +139,22 @@ public struct AntigravityStatusSnapshot: Sendable {
         let summaryCandidates = normalized.filter(Self.isSummaryCandidate)
         let primaryQuota = Self.representative(for: .gemini, in: summaryCandidates)
         let secondaryQuota = Self.representative(for: .claudeGPT, in: summaryCandidates)
+        let fallbackQuota: AntigravityModelQuota? = if primaryQuota == nil, secondaryQuota == nil {
+            switch self.source {
+            case .local:
+                Self.fallbackRepresentative(in: normalized.filter {
+                    $0.family == .unknown &&
+                        Self.isSelectableTextModel($0) &&
+                        $0.quota.remainingFraction != nil
+                })
+            case .remote:
+                nil
+            }
+        } else {
+            nil
+        }
 
-        let primary = primaryQuota.map(Self.rateWindow(for:))
+        let primary = (primaryQuota ?? fallbackQuota).map(Self.rateWindow(for:))
         let secondary = secondaryQuota.map(Self.rateWindow(for:))
         let extraWindows = Self.extraRateWindows(
             from: normalized,
@@ -517,6 +531,15 @@ public struct AntigravityStatusSnapshot: Sendable {
             default:
                 return lhs.quota.label.localizedCaseInsensitiveCompare(rhs.quota.label) == .orderedAscending
             }
+        }?.quota
+    }
+
+    private static func fallbackRepresentative(in models: [AntigravityNormalizedModel]) -> AntigravityModelQuota? {
+        models.min { lhs, rhs in
+            if lhs.quota.remainingPercent != rhs.quota.remainingPercent {
+                return lhs.quota.remainingPercent < rhs.quota.remainingPercent
+            }
+            return lhs.quota.label.localizedCaseInsensitiveCompare(rhs.quota.label) == .orderedAscending
         }?.quota
     }
 
@@ -1606,116 +1629,5 @@ public struct AntigravityStatusProbe: Sendable {
             throw AntigravityStatusProbeError.apiError("HTTP \(http.statusCode): \(message)")
         }
         return data
-    }
-}
-
-private struct UserStatusResponse: Decodable {
-    let code: CodeValue?
-    let message: String?
-    let userStatus: UserStatus?
-}
-
-private struct CommandModelConfigResponse: Decodable {
-    let code: CodeValue?
-    let message: String?
-    let clientModelConfigs: [ModelConfig]?
-}
-
-private struct UserStatus: Decodable {
-    let email: String?
-    let planStatus: PlanStatus?
-    let cascadeModelConfigData: ModelConfigData?
-    let userTier: UserTier?
-}
-
-private struct UserTier: Decodable {
-    let id: String?
-    let name: String?
-    let description: String?
-
-    var preferredName: String? {
-        guard let value = name?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
-        return value.isEmpty ? nil : value
-    }
-}
-
-private struct PlanStatus: Decodable {
-    let planInfo: PlanInfo?
-}
-
-private struct PlanInfo: Decodable {
-    let planName: String?
-    let planDisplayName: String?
-    let displayName: String?
-    let productName: String?
-    let planShortName: String?
-
-    var preferredName: String? {
-        let candidates = [
-            planDisplayName,
-            displayName,
-            productName,
-            planName,
-            planShortName,
-        ]
-        for candidate in candidates {
-            guard let value = candidate?.trimmingCharacters(in: .whitespacesAndNewlines) else { continue }
-            if !value.isEmpty { return value }
-        }
-        return nil
-    }
-}
-
-private struct ModelConfigData: Decodable {
-    let clientModelConfigs: [ModelConfig]?
-}
-
-private struct ModelConfig: Decodable {
-    let label: String
-    let modelOrAlias: ModelAlias
-    let quotaInfo: QuotaInfo?
-}
-
-private struct ModelAlias: Decodable {
-    let model: String
-}
-
-private struct QuotaInfo: Decodable {
-    let remainingFraction: Double?
-    let resetTime: String?
-}
-
-enum CodeValue: Decodable {
-    case int(Int)
-    case string(String)
-
-    var isOK: Bool {
-        switch self {
-        case let .int(value):
-            return value == 0
-        case let .string(value):
-            let lower = value.lowercased()
-            return lower == "ok" || lower == "success" || value == "0"
-        }
-    }
-
-    var rawValue: String {
-        switch self {
-        case let .int(value): "\(value)"
-        case let .string(value): value
-        }
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let value = try? container.decode(Int.self) {
-            self = .int(value)
-            return
-        }
-        if let value = try? container.decode(String.self) {
-            self = .string(value)
-            return
-        }
-        throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported code type")
     }
 }

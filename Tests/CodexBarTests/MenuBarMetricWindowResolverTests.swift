@@ -94,6 +94,31 @@ struct MenuBarMetricWindowResolverTests {
     }
 
     @Test
+    func `automatic metric uses unclassified antigravity compact fallback`() throws {
+        let antigravitySnapshot = AntigravityStatusSnapshot(
+            modelQuotas: [
+                AntigravityModelQuota(
+                    label: "Experimental Model",
+                    modelId: "MODEL_PLACEHOLDER_NEW",
+                    remainingFraction: 0.36,
+                    resetTime: nil,
+                    resetDescription: nil),
+            ],
+            accountEmail: nil,
+            accountPlan: nil,
+            source: .local)
+        let snapshot = try antigravitySnapshot.toUsageSnapshot()
+
+        let window = MenuBarMetricWindowResolver.rateWindow(
+            preference: .automatic,
+            provider: .antigravity,
+            snapshot: snapshot,
+            supportsAverage: false)
+
+        #expect(window?.usedPercent == 64)
+    }
+
+    @Test
     func `explicit antigravity metric keeps requested family lane`() {
         let snapshot = UsageSnapshot(
             primary: RateWindow(usedPercent: 0, windowMinutes: nil, resetsAt: nil, resetDescription: "Claude"),
