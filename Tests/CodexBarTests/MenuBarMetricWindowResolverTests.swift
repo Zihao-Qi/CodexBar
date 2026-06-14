@@ -57,8 +57,8 @@ struct MenuBarMetricWindowResolverTests {
     }
 
     @Test
-    func `automatic metric ignores untracked antigravity family lane`() throws {
-        let untrackedReset = Date(timeIntervalSince1970: 1000)
+    func `automatic metric uses recognized antigravity gemini pool when claude gpt is reset only`() throws {
+        let resetOnlyReset = Date(timeIntervalSince1970: 1000)
         let exhaustedReset = Date(timeIntervalSince1970: 2000)
         let antigravitySnapshot = AntigravityStatusSnapshot(
             modelQuotas: [
@@ -66,7 +66,7 @@ struct MenuBarMetricWindowResolverTests {
                     label: "Claude Sonnet 4.6",
                     modelId: "claude-sonnet-4-6",
                     remainingFraction: nil,
-                    resetTime: untrackedReset,
+                    resetTime: resetOnlyReset,
                     resetDescription: nil),
                 AntigravityModelQuota(
                     label: "Gemini 3.1 Pro",
@@ -79,7 +79,9 @@ struct MenuBarMetricWindowResolverTests {
             accountPlan: nil,
             source: .local)
         let snapshot = try antigravitySnapshot.toUsageSnapshot()
-        #expect(snapshot.primary == nil)
+        #expect(snapshot.primary?.usedPercent == 100)
+        #expect(snapshot.primary?.resetsAt == exhaustedReset)
+        #expect(snapshot.secondary == nil)
 
         let window = MenuBarMetricWindowResolver.rateWindow(
             preference: .automatic,
