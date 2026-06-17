@@ -801,13 +801,6 @@ extension UsageMenuCardView.Model {
         let usesLiveSubtitle: Bool
         let now: Date
 
-        var quotaDisplayNow: Date {
-            guard self.isRefreshing, let updatedAt = self.snapshot?.updatedAt else {
-                return self.now
-            }
-            return updatedAt
-        }
-
         init(
             provider: UsageProvider,
             metadata: ProviderMetadata,
@@ -1231,7 +1224,7 @@ extension UsageMenuCardView.Model {
             // Perplexity purchased credits don't reset; show balance without "Resets" prefix.
             let opusResetText: String? = input.provider == .perplexity
                 ? opus.resetDescription?.trimmingCharacters(in: .whitespacesAndNewlines)
-                : Self.resetText(for: opus, style: input.resetTimeDisplayStyle, now: input.quotaDisplayNow)
+                : Self.resetText(for: opus, style: input.resetTimeDisplayStyle, now: input.now)
             let tertiaryPaceDetail = Self.cursorBillingCyclePaceDetail(window: opus, input: input)
             metrics.append(Metric(
                 id: "tertiary",
@@ -1271,7 +1264,7 @@ extension UsageMenuCardView.Model {
         {
             let percent = input.usageBarsShowUsed ? (100 - remaining) : remaining
             let resetText = codexProjection.limitWindow(for: .codeReview).flatMap {
-                Self.resetText(for: $0, style: input.resetTimeDisplayStyle, now: input.quotaDisplayNow)
+                Self.resetText(for: $0, style: input.resetTimeDisplayStyle, now: input.now)
             }
             metrics.append(Metric(
                 id: "code-review",
@@ -1297,10 +1290,7 @@ extension UsageMenuCardView.Model {
         openRouterQuotaDetail: String?) -> Metric
     {
         var primaryDetailText: String? = input.provider == .zai ? zaiTokenDetail : nil
-        var primaryResetText = Self.resetText(
-            for: primary,
-            style: input.resetTimeDisplayStyle,
-            now: input.quotaDisplayNow)
+        var primaryResetText = Self.resetText(for: primary, style: input.resetTimeDisplayStyle, now: input.now)
         var primaryDetailLeft: String?
         var primaryDetailRight: String?
         if input.provider == .crof,
@@ -1354,7 +1344,7 @@ extension UsageMenuCardView.Model {
         if let paceDetail = Self.sessionPaceDetail(
             provider: input.provider,
             window: primary,
-            now: input.quotaDisplayNow,
+            now: input.now,
             showUsed: input.usageBarsShowUsed)
         {
             primaryDetailLeft = paceDetail.leftLabel
@@ -1374,7 +1364,7 @@ extension UsageMenuCardView.Model {
             if let pace = input.weeklyPace {
                 let paceDetail = Self.weeklyPaceDetail(
                     window: primary,
-                    now: input.quotaDisplayNow,
+                    now: input.now,
                     pace: pace,
                     showUsed: input.usageBarsShowUsed)
                 if let paceDetail {
@@ -1402,7 +1392,7 @@ extension UsageMenuCardView.Model {
         if input.provider == .synthetic,
            let regen = Self.syntheticRollingRegenDetail(
                window: primary,
-               now: input.quotaDisplayNow,
+               now: input.now,
                showUsed: input.usageBarsShowUsed)
         {
             primaryResetText = regen.resetText
@@ -1442,13 +1432,10 @@ extension UsageMenuCardView.Model {
     {
         var paceDetail = Self.weeklyPaceDetail(
             window: weekly,
-            now: input.quotaDisplayNow,
+            now: input.now,
             pace: input.weeklyPace,
             showUsed: input.usageBarsShowUsed)
-        var weeklyResetText = Self.resetText(
-            for: weekly,
-            style: input.resetTimeDisplayStyle,
-            now: input.quotaDisplayNow)
+        var weeklyResetText = Self.resetText(for: weekly, style: input.resetTimeDisplayStyle, now: input.now)
         var weeklyDetailText: String? = input.provider == .zai ? zaiTimeDetail : nil
         if input.provider == .warp,
            let detail = weekly.resetDescription,
@@ -1521,7 +1508,7 @@ extension UsageMenuCardView.Model {
            let regen = Self.syntheticRegenDetail(
                weekly: weekly,
                cost: input.snapshot?.providerCost,
-               now: input.quotaDisplayNow,
+               now: input.now,
                showUsed: input.usageBarsShowUsed)
         {
             weeklyResetText = regen.resetText
@@ -1560,14 +1547,14 @@ extension UsageMenuCardView.Model {
                 paceDetail = Self.sessionPaceDetail(
                     provider: input.provider,
                     window: window,
-                    now: input.quotaDisplayNow,
+                    now: input.now,
                     showUsed: input.usageBarsShowUsed)
             case .weekly:
                 title = L(input.metadata.weeklyLabel)
                 id = "secondary"
                 paceDetail = Self.weeklyPaceDetail(
                     window: window,
-                    now: input.quotaDisplayNow,
+                    now: input.now,
                     pace: Self.standardWeeklyPace(input: input, window: window),
                     showUsed: input.usageBarsShowUsed)
             }
@@ -1577,7 +1564,7 @@ extension UsageMenuCardView.Model {
                 title: title,
                 percent: Self.clamped(input.usageBarsShowUsed ? window.usedPercent : window.remainingPercent),
                 percentStyle: percentStyle,
-                resetText: Self.resetText(for: window, style: input.resetTimeDisplayStyle, now: input.quotaDisplayNow),
+                resetText: Self.resetText(for: window, style: input.resetTimeDisplayStyle, now: input.now),
                 detailText: nil,
                 detailLeftText: paceDetail?.leftLabel,
                 detailRightText: paceDetail?.rightLabel,

@@ -421,44 +421,6 @@ struct StatusMenuPersistentRefreshTests {
     }
 
     @Test
-    func `refreshing card evaluates weekly pace at snapshot timestamp`() throws {
-        let settings = self.makeSettings()
-        let controller = self.makeController(settings: settings)
-        let updatedAt = Date().addingTimeInterval(-3 * 24 * 60 * 60)
-        let weeklyReset = updatedAt.addingTimeInterval(7 * 24 * 60 * 60)
-
-        for provider in [UsageProvider.claude, .codex] {
-            controller.store.isRefreshing = false
-            controller.store.snapshots[provider] = UsageSnapshot(
-                primary: RateWindow(
-                    usedPercent: 10,
-                    windowMinutes: 300,
-                    resetsAt: updatedAt.addingTimeInterval(5 * 60 * 60),
-                    resetDescription: nil),
-                secondary: RateWindow(
-                    usedPercent: 21,
-                    windowMinutes: 10080,
-                    resetsAt: weeklyReset,
-                    resetDescription: nil),
-                updatedAt: updatedAt)
-
-            let completed = try #require(controller.menuCardModel(for: provider))
-            let completedWeekly = try #require(completed.metrics.first { $0.id == "secondary" })
-            #expect(completedWeekly.detailLeftText != nil)
-            #expect(completedWeekly.pacePercent != nil)
-
-            controller.store.isRefreshing = true
-            let refreshing = try #require(controller.menuCardModel(for: provider))
-            let refreshingWeekly = try #require(refreshing.metrics.first { $0.id == "secondary" })
-            #expect(refreshing.subtitleText == "Refreshing…")
-            #expect(refreshingWeekly.detailLeftText == nil)
-            #expect(refreshingWeekly.detailRightText == nil)
-            #expect(refreshingWeekly.pacePercent == nil)
-        }
-        controller.store.isRefreshing = false
-    }
-
-    @Test
     func `refresh monitor updates single line credit balances`() throws {
         let settings = self.makeSettings()
         let controller = self.makeController(

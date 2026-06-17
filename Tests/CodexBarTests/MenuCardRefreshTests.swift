@@ -33,7 +33,7 @@ struct MenuCardRefreshTests {
     }
 
     @Test
-    func `refreshing provider card keeps completed quota display frozen`() throws {
+    func `background refresh keeps quota timing current`() throws {
         let updatedAt = Date(timeIntervalSince1970: 1_800_000_000)
         for provider in [UsageProvider.claude, .codex] {
             let snapshot = UsageSnapshot(
@@ -64,10 +64,11 @@ struct MenuCardRefreshTests {
             let refreshingMetric = try #require(refreshingModel.metrics.first)
             #expect(refreshingModel.subtitleText == "Refreshing…")
             #expect(refreshingMetric.percentLabel == completedMetric.percentLabel)
-            #expect(refreshingMetric.resetText == completedMetric.resetText)
-            #expect(refreshingMetric.detailLeftText == completedMetric.detailLeftText)
-            #expect(refreshingMetric.detailRightText == completedMetric.detailRightText)
-            #expect(refreshingMetric.pacePercent == completedMetric.pacePercent)
+            #expect(completedMetric.resetText == "Resets in 4h 40m")
+            #expect(refreshingMetric.resetText == "Resets in 4h 30m")
+            #expect(refreshingMetric.detailLeftText != completedMetric.detailLeftText)
+            #expect(refreshingMetric.detailRightText != completedMetric.detailRightText)
+            #expect(refreshingMetric.pacePercent != completedMetric.pacePercent)
         }
     }
 }
