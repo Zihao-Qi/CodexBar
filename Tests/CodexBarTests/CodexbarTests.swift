@@ -141,7 +141,10 @@ struct CodexBarTests {
             stale: false,
             style: .antigravity)
         let bitmapReps = image.representations.compactMap { $0 as? NSBitmapImageRep }
-        let rep = try #require(bitmapReps.first(where: { $0.pixelsWide == 36 && $0.pixelsHigh == 36 }))
+        let matchingRep = bitmapReps.first { rep in
+            rep.pixelsWide == 36 && rep.pixelsHigh == 36
+        }
+        let rep = try #require(matchingRep)
 
         func averageAlpha(xRange: ClosedRange<Int>, yRange: ClosedRange<Int>) -> CGFloat {
             var total: CGFloat = 0
