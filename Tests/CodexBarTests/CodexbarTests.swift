@@ -49,37 +49,11 @@ struct CodexBarTests {
     }
 
     @Test
-    func `antigravity icon falls back to tertiary when leading lanes are missing`() {
+    func `antigravity icon ignores legacy model quota lanes`() {
         let snapshot = UsageSnapshot(
-            primary: nil,
-            secondary: nil,
+            primary: RateWindow(usedPercent: 30, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
+            secondary: RateWindow(usedPercent: 60, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
             tertiary: RateWindow(usedPercent: 80, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
-            updatedAt: Date())
-
-        let remaining = IconRemainingResolver.resolvedRemaining(snapshot: snapshot, style: .antigravity)
-        #expect(remaining.primary == 20)
-        #expect(remaining.secondary == nil)
-    }
-
-    @Test
-    func `antigravity icon uses next distinct fallback lane`() {
-        let snapshot = UsageSnapshot(
-            primary: nil,
-            secondary: RateWindow(usedPercent: 30, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
-            tertiary: RateWindow(usedPercent: 60, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
-            updatedAt: Date())
-
-        let remaining = IconRemainingResolver.resolvedRemaining(snapshot: snapshot, style: .antigravity)
-        #expect(remaining.primary == 70)
-        #expect(remaining.secondary == 40)
-    }
-
-    @Test
-    func `antigravity icon uses compact fallback model quota`() {
-        let snapshot = UsageSnapshot(
-            primary: nil,
-            secondary: nil,
-            tertiary: nil,
             extraRateWindows: [
                 NamedRateWindow(
                     id: "antigravity-compact-fallback-model",
@@ -94,7 +68,7 @@ struct CodexBarTests {
 
         let remaining = IconRemainingResolver.resolvedRemaining(snapshot: snapshot, style: .antigravity)
 
-        #expect(remaining.primary == 36)
+        #expect(remaining.primary == nil)
         #expect(remaining.secondary == nil)
     }
 

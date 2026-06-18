@@ -3,7 +3,6 @@ import CodexBarCore
 enum IconRemainingResolver {
     private static let visibleZeroPercent = 0.0001
     private static let antigravityQuotaSummaryWindowIDPrefix = "antigravity-quota-summary-"
-    private static let antigravityCompactFallbackWindowIDPrefix = "antigravity-compact-fallback-"
     private static let antigravityGeminiQuotaBucketIDPrefix = "gemini-"
     // Antigravity quota summaries currently expose exact 5-hour session and weekly buckets for the compact icon.
     private static let sessionWindowMinutes = 5 * 60
@@ -82,17 +81,6 @@ enum IconRemainingResolver {
             .window
     }
 
-    private static func antigravityLegacyVisibleWindows(snapshot: UsageSnapshot) -> [RateWindow] {
-        var windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap(\.self)
-        let compactFallbacks = snapshot.extraRateWindows?
-            .filter {
-                $0.usageKnown && $0.id.hasPrefix(Self.antigravityCompactFallbackWindowIDPrefix)
-            }
-            .map(\.window) ?? []
-        windows.append(contentsOf: compactFallbacks)
-        return windows
-    }
-
     static func resolvedWindows(
         snapshot: UsageSnapshot,
         style: IconStyle,
@@ -106,13 +94,9 @@ enum IconRemainingResolver {
                 secondary: windows.dropFirst().first)
         }
         if style == .antigravity {
-            if let windows = self.antigravityQuotaSummaryWindows(snapshot: snapshot) {
-                return windows
-            }
-            let windows = self.antigravityLegacyVisibleWindows(snapshot: snapshot)
-            return (
-                primary: windows.first,
-                secondary: windows.dropFirst().first)
+            // Only current quota-summary buckets define the fixed session/weekly icon lanes.
+            return self.antigravityQuotaSummaryWindows(snapshot: snapshot)
+                ?? (primary: nil, secondary: nil)
         }
         if style == .codex {
             let windows = self.codexVisibleWindows(snapshot: snapshot)
