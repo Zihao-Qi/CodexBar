@@ -29,6 +29,7 @@
 
 ### Fixed
 - Cost history: keep chart date labels aligned with their bars and visible without clipping. Thanks @elijahfriedman!
+- Claude settings: dim and disable Avoid Keychain prompts while global Keychain access is disabled. Thanks @Zihao-Qi!
 - Xiaomi MiMo: retry another imported browser session when a stale session redirects API requests to login. Thanks @Yuxin-Qiao!
 - Kiro: keep parsed usage available when the optional account probe times out or fails. Thanks @Yuxin-Qiao!
 - Cursor: ignore an exhausted Auto or API subquota only when another independent quota remains usable, while preserving the overall cap. Thanks @Yuxin-Qiao!
