@@ -293,7 +293,7 @@ struct MenuDescriptor {
         entries: inout [Entry],
         usage: OpenAIAPIUsageSnapshot)
     {
-        let today = usage.latestDay
+        let today = usage.currentDay
         let last7 = usage.last7Days
         let last30 = usage.last30Days
         let historyLabel = usage.historyWindowLabel
@@ -319,7 +319,7 @@ struct MenuDescriptor {
         entries: inout [Entry],
         usage: ClaudeAdminAPIUsageSnapshot)
     {
-        let today = usage.latestDay
+        let today = usage.currentDay
         let last7 = usage.last7Days
         let last30 = usage.last30Days
 

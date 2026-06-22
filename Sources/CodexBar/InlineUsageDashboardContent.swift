@@ -89,7 +89,7 @@ extension UsageMenuCardView.Model {
     }
 
     static func openAIAPIUsageNotes(_ usage: OpenAIAPIUsageSnapshot) -> [String] {
-        let today = usage.latestDay
+        let today = usage.currentDay
         let seven = usage.last7Days
         let thirty = usage.last30Days
         let historyLabel = usage.historyWindowLabel
@@ -318,7 +318,9 @@ extension UsageMenuCardView.Model {
                 value: cost,
                 accessibilityValue: "\(entry.date): \(Self.costString(cost, currencyCode: snapshot.currencyCode))")
         }
-        let latest = snapshot.daily.max { lhs, rhs in lhs.date < rhs.date }
+        let latest = CostUsageTokenSnapshot.latestEntry(in: snapshot.daily)
+        let usesLatestPrimary = provider == .bedrock || provider == .mistral
+        let primaryCostUSD = usesLatestPrimary ? latest?.costUSD : snapshot.sessionCostUSD
         var details: [String] = []
         if let topModel = Self.topCostModel(from: snapshot.daily) {
             details.append("\(L("Top model")): \(Self.shortModelName(topModel))")
@@ -337,8 +339,8 @@ extension UsageMenuCardView.Model {
             valueStyle: Self.costValueStyle(currencyCode: snapshot.currencyCode),
             kpis: [
                 .init(
-                    title: provider == .bedrock || provider == .mistral ? L("Latest") : L("Today"),
-                    value: latest?.costUSD.map { Self.costString($0, currencyCode: snapshot.currencyCode) } ?? "—",
+                    title: usesLatestPrimary ? L("Latest") : L("Today"),
+                    value: primaryCostUSD.map { Self.costString($0, currencyCode: snapshot.currencyCode) } ?? "—",
                     emphasis: true),
                 .init(
                     title: historyTitle,
@@ -378,7 +380,7 @@ extension UsageMenuCardView.Model {
     fileprivate static func claudeAdminAPIInlineDashboard(_ usage: ClaudeAdminAPIUsageSnapshot)
         -> InlineUsageDashboardModel
     {
-        let today = usage.latestDay
+        let today = usage.currentDay
         let last7 = usage.last7Days
         let last30 = usage.last30Days
         let points = usage.daily.suffix(30).map {
