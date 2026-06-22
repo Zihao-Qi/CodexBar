@@ -150,10 +150,12 @@ public struct OpenAIAPIUsageSnapshot: Codable, Equatable, Sendable {
     }
 
     public func summary(forLocalDayContaining date: Date, calendar: Calendar = .current) -> Summary {
-        let dayKey = CostUsageLocalDay.key(from: date, calendar: calendar)
         let selected = self.daily.filter { bucket in
-            if bucket.day.trimmingCharacters(in: .whitespacesAndNewlines) == dayKey { return true }
-            return CostUsageLocalDay.key(from: bucket.startTime, calendar: calendar) == dayKey
+            CostUsageLocalDay.intervalOverlapsLocalDay(
+                startTime: bucket.startTime,
+                endTime: bucket.endTime,
+                localDayContaining: date,
+                calendar: calendar)
         }
         return Summary(
             costUSD: selected.reduce(0) { $0 + $1.costUSD },

@@ -855,4 +855,17 @@ enum CostUsageLocalDay {
         let day = components.day ?? 0
         return String(format: "%04d-%02d-%02d", year, month, day)
     }
+
+    static func intervalOverlapsLocalDay(
+        startTime: Date,
+        endTime: Date,
+        localDayContaining date: Date,
+        calendar: Calendar = .current) -> Bool
+    {
+        let localDayStart = calendar.startOfDay(for: date)
+        guard let localDayEnd = calendar.date(byAdding: .day, value: 1, to: localDayStart) else {
+            return false
+        }
+        return startTime < localDayEnd && endTime > localDayStart
+    }
 }
