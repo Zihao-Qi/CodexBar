@@ -187,7 +187,7 @@ struct StatusMenuPersistentRefreshTests {
     }
 
     @Test
-    func `refresh row keeps custom view while remaining action items stay native`() throws {
+    func `bottom action rows share custom view while update item stays native`() throws {
         let previousRendering = StatusItemController.menuCardRenderingEnabled
         StatusItemController.menuCardRenderingEnabled = true
         defer { StatusItemController.menuCardRenderingEnabled = previousRendering }
@@ -210,11 +210,17 @@ struct StatusMenuPersistentRefreshTests {
         #expect(refreshItem.keyEquivalent.isEmpty)
         #expect(refreshItem.keyEquivalentModifierMask.isEmpty)
 
-        for title in ["Update ready, restart now?", "Settings...", "About CodexBar", "Quit"] {
+        #expect(updateItem.view == nil)
+        #expect(updateItem.action != nil)
+        #expect(updateItem.target === controller)
+
+        for title in ["Settings...", "About CodexBar", "Quit"] {
             let item = try #require(menu.items.first { $0.title == title })
-            #expect(item.view == nil, "'\(title)' should be a native NSMenuItem with no custom view")
+            #expect(item.view is PersistentMenuActionView, "'\(title)' should share the custom bottom action row")
             #expect(item.action != nil)
             #expect(item.target === controller)
+            #expect(item.keyEquivalent.isEmpty)
+            #expect(item.keyEquivalentModifierMask.isEmpty)
         }
     }
 

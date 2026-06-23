@@ -14,31 +14,6 @@ struct DebugPane: View {
     @State private var isClearingCostCache = false
     @State private var costCacheStatus: String?
     @State private var cookieCacheStatus: String?
-    @AppStorage(PersistentMenuActionRowMetrics.debugRowHeightKey)
-    private var debugRefreshRowHeight = Double(PersistentMenuActionRowMetrics.defaults.rowHeight)
-    @AppStorage(PersistentMenuActionRowMetrics.debugSelectionHorizontalInsetKey)
-    private var debugRefreshSelectionHorizontalInset = Double(
-        PersistentMenuActionRowMetrics.defaults.selectionHorizontalInset)
-    @AppStorage(PersistentMenuActionRowMetrics.debugSelectionVerticalInsetKey)
-    private var debugRefreshSelectionVerticalInset = Double(
-        PersistentMenuActionRowMetrics.defaults.selectionVerticalInset)
-    @AppStorage(PersistentMenuActionRowMetrics.debugSelectionCornerRadiusKey)
-    private var debugRefreshSelectionCornerRadius = Double(
-        PersistentMenuActionRowMetrics.defaults.selectionCornerRadius)
-    @AppStorage(PersistentMenuActionRowMetrics.debugLeadingPaddingKey)
-    private var debugRefreshLeadingPadding = Double(PersistentMenuActionRowMetrics.defaults.leadingPadding)
-    @AppStorage(PersistentMenuActionRowMetrics.debugTrailingPaddingKey)
-    private var debugRefreshTrailingPadding = Double(PersistentMenuActionRowMetrics.defaults.trailingPadding)
-    @AppStorage(PersistentMenuActionRowMetrics.debugIconWidthKey)
-    private var debugRefreshIconWidth = Double(PersistentMenuActionRowMetrics.defaults.iconWidth)
-    @AppStorage(PersistentMenuActionRowMetrics.debugIconTitleSpacingKey)
-    private var debugRefreshIconTitleSpacing = Double(PersistentMenuActionRowMetrics.defaults.iconTitleSpacing)
-    @AppStorage(PersistentMenuActionRowMetrics.debugShortcutXOffsetKey)
-    private var debugRefreshShortcutXOffset = Double(PersistentMenuActionRowMetrics.defaults.shortcutXOffset)
-    @AppStorage(PersistentMenuActionRowMetrics.debugShortcutYOffsetKey)
-    private var debugRefreshShortcutYOffset = Double(PersistentMenuActionRowMetrics.defaults.shortcutYOffset)
-    @AppStorage(PersistentMenuActionRowMetrics.debugShortcutColorModeKey)
-    private var debugRefreshShortcutColorMode = PersistentMenuActionRowMetrics.defaults.shortcutColorMode.rawValue
     #if DEBUG
     @State private var currentErrorProvider: UsageProvider = .codex
     @State private var simulatedErrorText: String = """
@@ -95,81 +70,6 @@ struct DebugPane: View {
                         title: L("force_animation_next_refresh"),
                         subtitle: L("force_animation_next_refresh_subtitle"),
                         binding: self.$store.debugForceAnimation)
-                }
-
-                SettingsSection(
-                    title: "Refresh row tuning",
-                    caption: "Debug tab controls for matching the persistent Refresh row to native menu items. "
-                        + "Reopen the status menu after changing a value.")
-                {
-                    self.refreshRowMetricSlider(
-                        title: "Row height",
-                        value: self.$debugRefreshRowHeight,
-                        range: 22...36,
-                        step: 0.5)
-                    self.refreshRowMetricSlider(
-                        title: "Highlight horizontal inset",
-                        value: self.$debugRefreshSelectionHorizontalInset,
-                        range: 0...12,
-                        step: 0.5)
-                    self.refreshRowMetricSlider(
-                        title: "Highlight vertical inset",
-                        value: self.$debugRefreshSelectionVerticalInset,
-                        range: 0...6,
-                        step: 0.5)
-                    self.refreshRowMetricSlider(
-                        title: "Highlight corner radius",
-                        value: self.$debugRefreshSelectionCornerRadius,
-                        range: 0...10,
-                        step: 0.5)
-                    self.refreshRowMetricSlider(
-                        title: "Leading padding",
-                        value: self.$debugRefreshLeadingPadding,
-                        range: 8...24,
-                        step: 0.5)
-                    self.refreshRowMetricSlider(
-                        title: "Trailing padding",
-                        value: self.$debugRefreshTrailingPadding,
-                        range: 0...18,
-                        step: 0.5)
-                    self.refreshRowMetricSlider(
-                        title: "Icon width",
-                        value: self.$debugRefreshIconWidth,
-                        range: 12...26,
-                        step: 0.5)
-                    self.refreshRowMetricSlider(
-                        title: "Icon/title spacing",
-                        value: self.$debugRefreshIconTitleSpacing,
-                        range: 0...14,
-                        step: 0.5)
-
-                    Divider()
-
-                    Picker("⌘R color", selection: self.$debugRefreshShortcutColorMode) {
-                        ForEach(PersistentMenuShortcutColorMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode.rawValue)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 320)
-
-                    self.refreshRowMetricSlider(
-                        title: "⌘R X offset",
-                        value: self.$debugRefreshShortcutXOffset,
-                        range: -12...12,
-                        step: 0.5)
-                    self.refreshRowMetricSlider(
-                        title: "⌘R Y offset",
-                        value: self.$debugRefreshShortcutYOffset,
-                        range: -6...6,
-                        step: 0.5)
-
-                    Button {
-                        self.resetRefreshRowTuning()
-                    } label: {
-                        Label("Reset refresh row tuning", systemImage: "arrow.counterclockwise")
-                    }
-                    .controlSize(.small)
                 }
 
                 SettingsSection(
@@ -522,48 +422,6 @@ struct DebugPane: View {
         Binding(
             get: { self.settings.debugLoadingPattern },
             set: { self.settings.debugLoadingPattern = $0 })
-    }
-
-    private func refreshRowMetricSlider(
-        title: String,
-        value: Binding<Double>,
-        range: ClosedRange<Double>,
-        step: Double) -> some View
-    {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(title)
-                    .font(.body)
-                Spacer()
-                Text(Self.refreshRowMetricText(value.wrappedValue))
-                    .font(.callout.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            Slider(value: value, in: range, step: step)
-        }
-    }
-
-    private static func refreshRowMetricText(_ value: Double) -> String {
-        let rounded = value.rounded()
-        if abs(value - rounded) < 0.001 {
-            return String(format: "%.0f pt", value)
-        }
-        return String(format: "%.1f pt", value)
-    }
-
-    private func resetRefreshRowTuning() {
-        let defaults = PersistentMenuActionRowMetrics.defaults
-        self.debugRefreshRowHeight = Double(defaults.rowHeight)
-        self.debugRefreshSelectionHorizontalInset = Double(defaults.selectionHorizontalInset)
-        self.debugRefreshSelectionVerticalInset = Double(defaults.selectionVerticalInset)
-        self.debugRefreshSelectionCornerRadius = Double(defaults.selectionCornerRadius)
-        self.debugRefreshLeadingPadding = Double(defaults.leadingPadding)
-        self.debugRefreshTrailingPadding = Double(defaults.trailingPadding)
-        self.debugRefreshIconWidth = Double(defaults.iconWidth)
-        self.debugRefreshIconTitleSpacing = Double(defaults.iconTitleSpacing)
-        self.debugRefreshShortcutXOffset = Double(defaults.shortcutXOffset)
-        self.debugRefreshShortcutYOffset = Double(defaults.shortcutYOffset)
-        self.debugRefreshShortcutColorMode = defaults.shortcutColorMode.rawValue
     }
 
     private func replaySelectedAnimation() {
