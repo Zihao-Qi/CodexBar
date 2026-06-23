@@ -142,13 +142,52 @@ struct StatusMenuPersistentRefreshTests {
 
         #expect(refreshItem.action == nil)
         #expect(refreshItem.target == nil)
-        #expect(refreshItem.view != nil)
+        let refreshView = try #require(refreshItem.view)
+        #expect(refreshView is any MenuCardHighlighting)
+        #expect(refreshView.fittingSize.height > 0)
         #expect(controller.isPersistentRefreshItem(refreshItem))
+        #expect(refreshItem.keyEquivalent.isEmpty)
+        #expect(refreshItem.keyEquivalentModifierMask.isEmpty)
         #expect(refreshIndex < settingsIndex)
     }
 
     @Test
-    func `refresh row is custom while remaining persistent action items stay native`() throws {
+    func `persistent refresh installs tracking monitor and handles command R without native shortcut`() async throws {
+        let settings = self.makeSettings()
+        settings.refreshFrequency = .manual
+        settings.mergeIcons = false
+
+        let controller = self.makeController(settings: settings)
+        controller.menuRefreshEnabledOverrideForTesting = true
+        let menu = controller.makeMenu(for: .codex)
+        controller.menuWillOpen(menu)
+        defer { controller.menuDidClose(menu) }
+
+        let refreshItem = try #require(menu.items.first { $0.title == "Refresh" })
+        #expect(controller.isPersistentRefreshItem(refreshItem))
+        #expect(controller.providerSwitcherShortcutEventMonitor != nil)
+        #expect(controller.providerSwitcherShortcutMenuID == ObjectIdentifier(menu))
+        #expect(refreshItem.keyEquivalent.isEmpty)
+
+        let gate = ManualRefreshGate()
+        controller._test_manualRefreshOperation = { await gate.wait() }
+        #expect(try controller.handleMenuTrackingShortcutEvent(self.keyEvent("r", keyCode: 15), menu: menu))
+        for _ in 0..<20 where controller.manualRefreshTask == nil {
+            await Task.yield()
+        }
+
+        let task = try #require(controller.manualRefreshTask)
+        #expect(!refreshItem.isEnabled)
+
+        gate.resume()
+        await task.value
+
+        #expect(controller.manualRefreshTask == nil)
+        #expect(refreshItem.isEnabled)
+    }
+
+    @Test
+    func `refresh row keeps custom view while remaining action items stay native`() throws {
         let previousRendering = StatusItemController.menuCardRenderingEnabled
         StatusItemController.menuCardRenderingEnabled = true
         defer { StatusItemController.menuCardRenderingEnabled = previousRendering }
@@ -165,9 +204,11 @@ struct StatusMenuPersistentRefreshTests {
         let refreshItem = try #require(menu.items.first { $0.title == "Refresh" })
         #expect(MenuDescriptor.MenuAction.installUpdate.systemImageName == "arrow.down.circle")
         #expect(updateItem.image != nil)
-        #expect(refreshItem.view != nil)
+        #expect(refreshItem.view is any MenuCardHighlighting)
         #expect(refreshItem.action == nil)
         #expect(controller.isPersistentRefreshItem(refreshItem))
+        #expect(refreshItem.keyEquivalent.isEmpty)
+        #expect(refreshItem.keyEquivalentModifierMask.isEmpty)
 
         for title in ["Update ready, restart now?", "Settings...", "About CodexBar", "Quit"] {
             let item = try #require(menu.items.first { $0.title == title })
@@ -192,7 +233,6 @@ struct StatusMenuPersistentRefreshTests {
         controller.menuWillOpen(menu)
 
         let refreshItem = try #require(menu.items.first { $0.title == "Refresh" })
-        #expect(refreshItem.view != nil)
         #expect(controller.isPersistentRefreshItem(refreshItem))
         #expect(controller.persistentRefreshItems.allObjects.contains { $0 === refreshItem })
         #expect(refreshItem.isEnabled)
@@ -888,7 +928,7 @@ struct StatusMenuPersistentRefreshTests {
     }
 
     @Test
-    func `failed manual refresh returns native item to enabled and surfaces error`() async throws {
+    func `failed manual refresh returns persistent item to enabled and surfaces error`() async throws {
         let settings = self.makeSettings()
         settings.refreshFrequency = .manual
         settings.mergeIcons = false

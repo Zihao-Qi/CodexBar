@@ -39,6 +39,8 @@ extension StatusItemController {
 
     private func shortcut(for action: MenuDescriptor.MenuAction) -> (key: String, modifiers: NSEvent.ModifierFlags)? {
         switch action {
+        case .refresh:
+            ("r", [.command])
         case .settings:
             (",", [.command])
         case .quit:
@@ -879,20 +881,56 @@ extension StatusItemController {
         menu: NSMenu,
         width: CGFloat) -> NSMenuItem
     {
-        let item = self.makeMenuCardItem(
-            PersistentMenuActionRowView(
-                title: title,
-                systemImageName: action.systemImageName),
-            id: Self.persistentRefreshMenuItemID,
-            width: width,
-            heightCacheFingerprint: "persistentRefreshAction:\(action.systemImageName ?? "")|\(title)",
-            onClick: { [weak self, weak menu] in
-                guard let self, let menu else { return }
-                self.performPersistentRefreshAction(in: ObjectIdentifier(menu))
-            })
+        let shortcut = self.shortcut(for: action)
+        let shortcutText = shortcut.map { self.shortcutLabel(for: $0) }
+        let item = NSMenuItem()
+        item.representedObject = Self.persistentRefreshMenuItemID
+
+        if self.menuCardRenderingEnabledForController {
+            let metrics = PersistentMenuActionRowMetrics.current
+            let highlightState = MenuCardHighlightState()
+            let row = PersistentMenuActionRowContainerView(highlightState: highlightState) {
+                PersistentMenuActionRowView(
+                    title: title,
+                    systemImageName: action.systemImageName,
+                    shortcutText: shortcutText)
+            }
+            let view = PersistentMenuActionHostingView(
+                rootView: row,
+                highlightState: highlightState,
+                rowHeight: metrics.rowHeight,
+                onClick: { [weak self, weak menu] in
+                    guard let self, let menu else { return }
+                    self.performPersistentRefreshAction(in: ObjectIdentifier(menu))
+                })
+            view.applySize(width: width, height: metrics.rowHeight)
+            item.view = view
+        }
+
         item.title = title
+        item.action = nil
+        item.keyEquivalentModifierMask = []
         item.isEnabled = !self.isRefreshActionInFlight(for: menu)
+        item.toolTip = title
         return item
+    }
+
+    private func shortcutLabel(for shortcut: (key: String, modifiers: NSEvent.ModifierFlags)) -> String {
+        var label = ""
+        if shortcut.modifiers.contains(.control) {
+            label += "^"
+        }
+        if shortcut.modifiers.contains(.option) {
+            label += "⌥"
+        }
+        if shortcut.modifiers.contains(.shift) {
+            label += "⇧"
+        }
+        if shortcut.modifiers.contains(.command) {
+            label += "⌘"
+        }
+        label += shortcut.key.uppercased()
+        return label
     }
 
     private func makeWrappedSecondaryTextItem(text: String, width: CGFloat) -> NSMenuItem {

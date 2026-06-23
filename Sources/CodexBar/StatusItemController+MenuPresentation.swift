@@ -213,6 +213,87 @@ final class MenuCardItemHostingView<Content: View>: NSHostingView<Content>, Menu
     }
 }
 
+@MainActor
+final class PersistentMenuActionHostingView<Content: View>: NSHostingView<Content>, MenuCardHighlighting {
+    let highlightState: MenuCardHighlightState
+    private(set) var allowsMenuHighlight = true
+    private var rowHeight: CGFloat
+    private var onClick: (() -> Void)?
+
+    override var allowsVibrancy: Bool {
+        true
+    }
+
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: self.frame.width, height: self.rowHeight)
+    }
+
+    init(
+        rootView: Content,
+        highlightState: MenuCardHighlightState,
+        rowHeight: CGFloat,
+        onClick: (() -> Void)? = nil)
+    {
+        self.highlightState = highlightState
+        self.rowHeight = rowHeight
+        self.onClick = onClick
+        super.init(rootView: rootView)
+        if onClick != nil {
+            self.installClickRecognizer()
+        }
+    }
+
+    @available(*, unavailable)
+    required init(rootView _: Content) {
+        fatalError("init(rootView:) has not been implemented")
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
+
+    override func accessibilityRole() -> NSAccessibility.Role? {
+        self.onClick == nil ? super.accessibilityRole() : .button
+    }
+
+    override func accessibilityPerformPress() -> Bool {
+        guard let onClick = self.onClick else {
+            return super.accessibilityPerformPress()
+        }
+        onClick()
+        return true
+    }
+
+    func applySize(width: CGFloat, height: CGFloat) {
+        self.rowHeight = max(1, ceil(height))
+        self.frame = NSRect(
+            origin: self.frame.origin,
+            size: NSSize(width: width, height: self.rowHeight))
+        self.invalidateIntrinsicContentSize()
+    }
+
+    func setHighlighted(_ highlighted: Bool) {
+        guard self.highlightState.isHighlighted != highlighted else { return }
+        self.highlightState.isHighlighted = highlighted
+    }
+
+    private func installClickRecognizer() {
+        let recognizer = NSClickGestureRecognizer(target: self, action: #selector(self.handlePrimaryClick(_:)))
+        recognizer.buttonMask = 0x1
+        self.addGestureRecognizer(recognizer)
+    }
+
+    @objc private func handlePrimaryClick(_ recognizer: NSClickGestureRecognizer) {
+        guard recognizer.state == .ended else { return }
+        self.onClick?()
+    }
+}
+
 struct MenuCardSectionContainerView<Content: View>: View {
     @Bindable var highlightState: MenuCardHighlightState
     let showsSubmenuIndicator: Bool
