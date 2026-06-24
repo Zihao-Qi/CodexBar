@@ -168,7 +168,8 @@ struct PersistentRefreshRowMetrics: Equatable {
         selectionHorizontalInset: 5,
         selectionVerticalInset: 0,
         selectionCornerRadius: 7,
-        leadingPadding: 16,
+        // Align the custom row's image/title frames with native NSMenuItem columns.
+        leadingPadding: 13,
         trailingPadding: 8,
         iconWidth: 17,
         iconSymbolPointSize: 11,

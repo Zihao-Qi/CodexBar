@@ -1004,7 +1004,7 @@ extension StatusMenuPersistentRefreshTests {
         #expect(metrics.selectionHorizontalInset == 5)
         #expect(metrics.selectionVerticalInset == 0)
         #expect(metrics.selectionCornerRadius == 7)
-        #expect(metrics.leadingPadding == 16)
+        #expect(metrics.leadingPadding == 13)
         #expect(metrics.trailingPadding == 8)
         #expect(metrics.iconWidth == 17)
         #expect(metrics.iconSymbolPointSize == 11)
@@ -1042,6 +1042,12 @@ extension StatusMenuPersistentRefreshTests {
         #expect(abs(shortcutFont.pointSize - PersistentRefreshRowMetrics.defaults.shortcutFontSize) < 0.001)
 
         let iconView = try #require(refreshView.subviews.compactMap { $0 as? NSImageView }.first)
+        let titleField = try #require(
+            refreshView.subviews.compactMap { $0 as? NSTextField }.first { $0.stringValue == "Refresh" })
+        #expect(iconView.frame.minX == PersistentRefreshRowMetrics.defaults.leadingPadding)
+        #expect(titleField.frame.minX == PersistentRefreshRowMetrics.defaults.leadingPadding
+            + PersistentRefreshRowMetrics.defaults.iconWidth
+            + PersistentRefreshRowMetrics.defaults.iconTitleSpacing)
         #expect(iconView.frame.width == PersistentRefreshRowMetrics.defaults.iconWidth)
         #expect(iconView.frame.height == PersistentRefreshRowMetrics.defaults.iconWidth)
     }
