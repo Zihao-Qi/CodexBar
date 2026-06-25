@@ -19,7 +19,7 @@ extension UsageMenuCardView.Model {
         else {
             return redacted
         }
-        return "Team Hidden\(redacted[separator.lowerBound...])"
+        return "Team\(redacted[separator.lowerBound...])"
     }
 
     static func redactedMetrics(

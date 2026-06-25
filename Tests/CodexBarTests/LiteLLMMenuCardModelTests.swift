@@ -130,7 +130,7 @@ struct LiteLLMMenuCardModelTests {
             now: now))
 
         let team = try #require(model.metrics.first { $0.id == "secondary" })
-        #expect(team.detailText == "Team Hidden: $70.00 / $1,000.00")
+        #expect(team.detailText == "Team: $70.00 / $1,000.00")
         #expect(team.detailText?.contains(teamAlias) == false)
     }
 
