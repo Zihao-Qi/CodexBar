@@ -87,6 +87,96 @@ extension SettingsStore {
         }
     }
 
+    var debugPersistentRefreshMetrics: PersistentRefreshRowMetrics {
+        PersistentRefreshRowMetrics(overrides: self.defaultsState.debugPersistentRefreshMetricsRaw)
+    }
+
+    func debugPersistentRefreshMetric(_ key: PersistentRefreshRowMetrics.Key) -> Double {
+        self.defaultsState.debugPersistentRefreshMetricsRaw[key.rawValue] ?? key.defaultValue
+    }
+
+    func setDebugPersistentRefreshMetric(_ key: PersistentRefreshRowMetrics.Key, value: Double) {
+        let sanitized = key.sanitized(value)
+        if abs(sanitized - key.defaultValue) < 0.001 {
+            self.defaultsState.debugPersistentRefreshMetricsRaw.removeValue(forKey: key.rawValue)
+        } else {
+            self.defaultsState.debugPersistentRefreshMetricsRaw[key.rawValue] = sanitized
+        }
+        self.persistDebugPersistentRefreshMetrics()
+    }
+
+    func resetDebugPersistentRefreshMetrics() {
+        self.defaultsState.debugPersistentRefreshMetricsRaw.removeAll()
+        self.persistDebugPersistentRefreshMetrics()
+    }
+
+    var debugMenuLayoutProbeScope: DebugMenuLayoutProbeScope {
+        get {
+            DebugMenuLayoutProbeScope(rawValue: self.defaultsState.debugMenuLayoutProbe.scopeRaw) ?? .off
+        }
+        set {
+            self.defaultsState.debugMenuLayoutProbe.scopeRaw = newValue.rawValue
+            self.userDefaults.set(newValue.rawValue, forKey: "debugMenuLayoutProbeScope")
+        }
+    }
+
+    var debugMenuLayoutProbeAction: DebugMenuLayoutProbeAction {
+        get {
+            DebugMenuLayoutProbeAction(rawValue: self.defaultsState.debugMenuLayoutProbe.actionRaw) ?? .dashboard
+        }
+        set {
+            self.defaultsState.debugMenuLayoutProbe.actionRaw = newValue.rawValue
+            self.userDefaults.set(newValue.rawValue, forKey: "debugMenuLayoutProbeAction")
+        }
+    }
+
+    var debugMenuLayoutProbeIcon: DebugMenuLayoutProbeIcon {
+        get {
+            DebugMenuLayoutProbeIcon(rawValue: self.defaultsState.debugMenuLayoutProbe.iconRaw) ?? .actionDefault
+        }
+        set {
+            self.defaultsState.debugMenuLayoutProbe.iconRaw = newValue.rawValue
+            self.userDefaults.set(newValue.rawValue, forKey: "debugMenuLayoutProbeIcon")
+        }
+    }
+
+    var debugMenuLayoutProbeTitle: DebugMenuLayoutProbeTitle {
+        get {
+            DebugMenuLayoutProbeTitle(rawValue: self.defaultsState.debugMenuLayoutProbe.titleRaw) ?? .short
+        }
+        set {
+            self.defaultsState.debugMenuLayoutProbe.titleRaw = newValue.rawValue
+            self.userDefaults.set(newValue.rawValue, forKey: "debugMenuLayoutProbeTitle")
+        }
+    }
+
+    var debugMenuLayoutProbeItemEnabled: Bool {
+        get { self.defaultsState.debugMenuLayoutProbe.itemEnabled }
+        set {
+            self.defaultsState.debugMenuLayoutProbe.itemEnabled = newValue
+            self.userDefaults.set(newValue, forKey: "debugMenuLayoutProbeItemEnabled")
+        }
+    }
+
+    var debugMenuLayoutProbeIconPointSize: Double {
+        get { self.defaultsState.debugMenuLayoutProbe.iconPointSize }
+        set {
+            let sanitized = DebugMenuLayoutProbeIconSize.sanitized(newValue)
+            self.defaultsState.debugMenuLayoutProbe.iconPointSize = sanitized
+            self.userDefaults.set(sanitized, forKey: "debugMenuLayoutProbeIconPointSize")
+        }
+    }
+
+    private func persistDebugPersistentRefreshMetrics() {
+        if self.defaultsState.debugPersistentRefreshMetricsRaw.isEmpty {
+            self.userDefaults.removeObject(forKey: "debugPersistentRefreshMetrics")
+        } else {
+            self.userDefaults.set(
+                self.defaultsState.debugPersistentRefreshMetricsRaw,
+                forKey: "debugPersistentRefreshMetrics")
+        }
+    }
+
     var statusChecksEnabled: Bool {
         get { self.defaultsState.statusChecksEnabled }
         set {

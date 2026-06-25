@@ -24,6 +24,7 @@ struct MenuDescriptor {
     enum Entry {
         case text(String, TextStyle)
         case action(String, MenuAction)
+        case debugLayoutProbe(String, MenuAction, String?, Bool, Double)
         case submenu(String, String?, [SubmenuItem])
         case divider
     }
@@ -118,6 +119,10 @@ struct MenuDescriptor {
             }
         }
 
+        let debugLayoutProbeEntry = Self.debugLayoutProbeEntry(
+            provider: provider,
+            settings: settings)
+
         if includeContextualActions {
             let actions = Self.actionsSection(
                 for: provider,
@@ -129,7 +134,9 @@ struct MenuDescriptor {
                 sections.append(actions)
             }
         }
-        sections.append(Self.metaSection(updateReady: updateReady))
+        sections.append(Self.metaSection(
+            updateReady: updateReady,
+            debugLayoutProbeEntry: includeContextualActions ? nil : debugLayoutProbeEntry))
 
         return MenuDescriptor(sections: sections)
     }
@@ -630,6 +637,10 @@ struct MenuDescriptor {
                 .appendActionMenuEntries(context: actionContext, entries: &entries)
         }
 
+        if let debugLayoutProbeEntry = Self.debugLayoutProbeEntry(provider: provider, settings: store.settings) {
+            entries.append(debugLayoutProbeEntry)
+        }
+
         if metadata?.dashboardURL != nil {
             entries.append(.action(L("Usage Dashboard"), .dashboard))
         }
@@ -647,10 +658,13 @@ struct MenuDescriptor {
         return Section(entries: entries)
     }
 
-    private static func metaSection(updateReady: Bool) -> Section {
+    private static func metaSection(updateReady: Bool, debugLayoutProbeEntry: Entry?) -> Section {
         var entries: [Entry] = []
         if updateReady {
             entries.append(.action(L("Update ready, restart now?"), .installUpdate))
+        }
+        if let debugLayoutProbeEntry {
+            entries.append(debugLayoutProbeEntry)
         }
         entries.append(contentsOf: [
             .action(L("Refresh"), .refresh),
@@ -659,6 +673,23 @@ struct MenuDescriptor {
             .action(L("Quit"), .quit),
         ])
         return Section(entries: entries)
+    }
+
+    private static func debugLayoutProbeEntry(
+        provider: UsageProvider?,
+        settings: SettingsStore) -> Entry?
+    {
+        guard settings.debugMenuLayoutProbeScope.applies(provider: provider),
+              let action = settings.debugMenuLayoutProbeAction.menuAction(provider: provider)
+        else { return nil }
+        let title = settings.debugMenuLayoutProbeTitle.menuTitle
+        let systemImageName = settings.debugMenuLayoutProbeIcon.systemImageName(for: action)
+        return .debugLayoutProbe(
+            title,
+            action,
+            systemImageName,
+            settings.debugMenuLayoutProbeItemEnabled,
+            settings.debugMenuLayoutProbeIconPointSize)
     }
 
     private static func statusLine(for provider: UsageProvider?, store: UsageStore) -> String? {

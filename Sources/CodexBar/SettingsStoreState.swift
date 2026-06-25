@@ -8,6 +8,8 @@ struct SettingsDefaultsState {
     var debugFileLoggingEnabled: Bool
     var debugLogLevelRaw: String?
     var debugLoadingPatternRaw: String?
+    var debugPersistentRefreshMetricsRaw: [String: Double]
+    var debugMenuLayoutProbe: DebugMenuLayoutProbeDefaults
     var debugKeepCLISessionsAlive: Bool
     var statusChecksEnabled: Bool
     var sessionQuotaNotificationsEnabled: Bool

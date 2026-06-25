@@ -777,101 +777,159 @@ extension StatusItemController {
         let actionableSections = sections.filter { section in
             section.entries.contains { entry in
                 if case .action = entry { return true }
+                if case .debugLayoutProbe = entry { return true }
                 if case .submenu = entry { return true }
                 return false
             }
         }
         for (index, section) in actionableSections.enumerated() {
             for entry in section.entries {
-                switch entry {
-                case let .text(text, style):
-                    if style == .secondary {
-                        menu.addItem(self.makeWrappedSecondaryTextItem(text: text, width: width))
-                        continue
-                    }
-                    let item = NSMenuItem(title: text, action: nil, keyEquivalent: "")
-                    item.isEnabled = false
-                    if style == .headline {
-                        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
-                        item.attributedTitle = NSAttributedString(string: text, attributes: [.font: font])
-                    } else if style == .secondary {
-                        let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
-                        item.attributedTitle = NSAttributedString(
-                            string: text,
-                            attributes: [.font: font, .foregroundColor: NSColor.secondaryLabelColor])
-                    }
-                    menu.addItem(item)
-                case let .action(title, action):
-                    if action == .refresh {
-                        let item = self.makePersistentRefreshItem(
-                            title: L(title),
-                            menu: captureMenu ?? menu,
-                            width: width)
-                        menu.addItem(item)
-                        self.persistentRefreshItems.add(item)
-                        continue
-                    }
-                    let localizedTitle = L(title)
-                    let (selector, represented) = self.selector(for: action)
-                    let item = NSMenuItem(title: localizedTitle, action: selector, keyEquivalent: "")
-                    item.target = self
-                    item.representedObject = represented
-                    if let shortcut = self.shortcut(for: action) {
-                        item.keyEquivalent = shortcut.key
-                        item.keyEquivalentModifierMask = shortcut.modifiers
-                    }
-                    if let iconName = action.systemImageName,
-                       let image = NSImage(systemSymbolName: iconName, accessibilityDescription: nil)
-                    {
-                        image.isTemplate = true
-                        image.size = NSSize(width: 16, height: 16)
-                        item.image = image
-                    }
-                    if case let .switchAccount(targetProvider) = action,
-                       let subtitle = self.switchAccountSubtitle(for: targetProvider)
-                    {
-                        item.isEnabled = false
-                        self.applySubtitle(subtitle, to: item, title: localizedTitle)
-                    } else if case .addCodexAccount = action,
-                              let subtitle = self.codexAddAccountSubtitle()
-                    {
-                        item.isEnabled = false
-                        self.applySubtitle(subtitle, to: item, title: localizedTitle)
-                    }
-                    menu.addItem(item)
-                case let .submenu(title, systemImageName, submenuItems):
-                    let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-                    if let systemImageName,
-                       let image = NSImage(systemSymbolName: systemImageName, accessibilityDescription: nil)
-                    {
-                        image.isTemplate = true
-                        image.size = NSSize(width: 16, height: 16)
-                        item.image = image
-                    }
-                    let submenu = NSMenu(title: title)
-                    submenu.autoenablesItems = false
-                    for submenuItem in submenuItems {
-                        let child = NSMenuItem(title: submenuItem.title, action: nil, keyEquivalent: "")
-                        child.state = submenuItem.isChecked ? .on : .off
-                        child.isEnabled = submenuItem.isEnabled
-                        if let action = submenuItem.action {
-                            let (selector, represented) = self.selector(for: action)
-                            child.action = selector
-                            child.target = self
-                            child.representedObject = represented
-                        }
-                        submenu.addItem(child)
-                    }
-                    item.submenu = submenu
-                    menu.addItem(item)
-                case .divider:
-                    menu.addItem(.separator())
-                }
+                self.addActionableEntry(
+                    entry,
+                    to: menu,
+                    width: width,
+                    captureMenu: captureMenu)
             }
             if index < actionableSections.count - 1 {
                 menu.addItem(.separator())
             }
         }
+    }
+
+    private func addActionableEntry(
+        _ entry: MenuDescriptor.Entry,
+        to menu: NSMenu,
+        width: CGFloat,
+        captureMenu: NSMenu?)
+    {
+        switch entry {
+        case let .text(text, style):
+            if style == .secondary {
+                menu.addItem(self.makeWrappedSecondaryTextItem(text: text, width: width))
+                return
+            }
+            let item = NSMenuItem(title: text, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            if style == .headline {
+                let font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+                item.attributedTitle = NSAttributedString(string: text, attributes: [.font: font])
+            } else if style == .secondary {
+                let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+                item.attributedTitle = NSAttributedString(
+                    string: text,
+                    attributes: [.font: font, .foregroundColor: NSColor.secondaryLabelColor])
+            }
+            menu.addItem(item)
+        case let .action(title, action):
+            self.addNativeActionItem(title: title, action: action, to: menu, width: width, captureMenu: captureMenu)
+        case let .debugLayoutProbe(title, action, systemImageName, isEnabled, iconPointSize):
+            let item = self.makeNativeActionItem(
+                title: title,
+                action: action,
+                systemImageName: systemImageName,
+                iconPointSize: CGFloat(iconPointSize))
+            item.isEnabled = isEnabled
+            menu.addItem(item)
+        case let .submenu(title, systemImageName, submenuItems):
+            menu.addItem(self.makeNativeSubmenuItem(
+                title: title,
+                systemImageName: systemImageName,
+                submenuItems: submenuItems))
+        case .divider:
+            menu.addItem(.separator())
+        }
+    }
+
+    private func addNativeActionItem(
+        title: String,
+        action: MenuDescriptor.MenuAction,
+        to menu: NSMenu,
+        width: CGFloat,
+        captureMenu: NSMenu?)
+    {
+        if action == .refresh {
+            let item = self.makePersistentRefreshItem(
+                title: L(title),
+                menu: captureMenu ?? menu,
+                width: width)
+            menu.addItem(item)
+            self.persistentRefreshItems.add(item)
+            return
+        }
+
+        let localizedTitle = L(title)
+        let item = self.makeNativeActionItem(
+            title: localizedTitle,
+            action: action,
+            systemImageName: action.systemImageName,
+            iconPointSize: 16)
+        if let shortcut = self.shortcut(for: action) {
+            item.keyEquivalent = shortcut.key
+            item.keyEquivalentModifierMask = shortcut.modifiers
+        }
+        if case let .switchAccount(targetProvider) = action,
+           let subtitle = self.switchAccountSubtitle(for: targetProvider)
+        {
+            item.isEnabled = false
+            self.applySubtitle(subtitle, to: item, title: localizedTitle)
+        } else if case .addCodexAccount = action,
+                  let subtitle = self.codexAddAccountSubtitle()
+        {
+            item.isEnabled = false
+            self.applySubtitle(subtitle, to: item, title: localizedTitle)
+        }
+        menu.addItem(item)
+    }
+
+    private func makeNativeActionItem(
+        title: String,
+        action: MenuDescriptor.MenuAction,
+        systemImageName: String?,
+        iconPointSize: CGFloat) -> NSMenuItem
+    {
+        let (selector, represented) = self.selector(for: action)
+        let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
+        item.target = self
+        item.representedObject = represented
+        if let systemImageName,
+           let image = NSImage(systemSymbolName: systemImageName, accessibilityDescription: nil)
+        {
+            image.isTemplate = true
+            image.size = NSSize(width: iconPointSize, height: iconPointSize)
+            item.image = image
+        }
+        return item
+    }
+
+    private func makeNativeSubmenuItem(
+        title: String,
+        systemImageName: String?,
+        submenuItems: [MenuDescriptor.SubmenuItem]) -> NSMenuItem
+    {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        if let systemImageName,
+           let image = NSImage(systemSymbolName: systemImageName, accessibilityDescription: nil)
+        {
+            image.isTemplate = true
+            image.size = NSSize(width: 16, height: 16)
+            item.image = image
+        }
+        let submenu = NSMenu(title: title)
+        submenu.autoenablesItems = false
+        for submenuItem in submenuItems {
+            let child = NSMenuItem(title: submenuItem.title, action: nil, keyEquivalent: "")
+            child.state = submenuItem.isChecked ? .on : .off
+            child.isEnabled = submenuItem.isEnabled
+            if let action = submenuItem.action {
+                let (selector, represented) = self.selector(for: action)
+                child.action = selector
+                child.target = self
+                child.representedObject = represented
+            }
+            submenu.addItem(child)
+        }
+        item.submenu = submenu
+        return item
     }
 
     private func makeWrappedSecondaryTextItem(text: String, width: CGFloat) -> NSMenuItem {

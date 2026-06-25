@@ -225,8 +225,13 @@ final class PersistentRefreshMenuView: NSView, MenuCardHighlighting {
     private let shortcutField: NSTextField?
     private var isRowHighlighted = false
     private var isRowEnabled = true
-    private var rowHeight = PersistentRefreshRowMetrics.defaults.rowHeight
+    private let metrics: PersistentRefreshRowMetrics
+    private var rowHeight: CGFloat
     private var onClick: (() -> Void)?
+
+    var metricsForLayout: PersistentRefreshRowMetrics {
+        self.metrics
+    }
 
     override var allowsVibrancy: Bool {
         true
@@ -240,10 +245,13 @@ final class PersistentRefreshMenuView: NSView, MenuCardHighlighting {
         title: String,
         systemImageName: String?,
         shortcutText: String?,
+        metrics: PersistentRefreshRowMetrics = .defaults,
         onClick: (() -> Void)? = nil)
     {
         self.titleField = NSTextField(labelWithString: title)
         self.shortcutField = shortcutText.map(NSTextField.init(labelWithString:))
+        self.metrics = metrics
+        self.rowHeight = metrics.rowHeight
         self.onClick = onClick
         super.init(frame: .zero)
         self.setupSelectionView()
@@ -307,37 +315,36 @@ final class PersistentRefreshMenuView: NSView, MenuCardHighlighting {
     override func layout() {
         super.layout()
 
-        let metrics = PersistentRefreshRowMetrics.defaults
         self.selectionView.frame = self.bounds.insetBy(
-            dx: metrics.selectionHorizontalInset,
-            dy: metrics.selectionVerticalInset)
-        self.selectionView.layer?.cornerRadius = metrics.selectionCornerRadius
+            dx: self.metrics.selectionHorizontalInset,
+            dy: self.metrics.selectionVerticalInset)
+        self.selectionView.layer?.cornerRadius = self.metrics.selectionCornerRadius
 
-        var leadingX = metrics.leadingPadding
+        var leadingX = self.metrics.leadingPadding
         if self.iconView.image != nil {
-            let iconSide = metrics.iconWidth
-            self.iconView.symbolConfiguration = Self.iconConfiguration(for: metrics)
+            let iconSide = self.metrics.iconWidth
+            self.iconView.symbolConfiguration = Self.iconConfiguration(for: self.metrics)
             self.iconView.frame = NSRect(
                 x: leadingX,
                 y: floor((self.bounds.height - iconSide) / 2),
                 width: iconSide,
                 height: iconSide)
-            leadingX += metrics.iconWidth + metrics.iconTitleSpacing
+            leadingX += self.metrics.iconWidth + self.metrics.iconTitleSpacing
         }
 
-        var titleMaxX = self.bounds.maxX - metrics.trailingPadding
+        var titleMaxX = self.bounds.maxX - self.metrics.trailingPadding
         if let shortcutField {
-            shortcutField.font = Self.shortcutFont(for: metrics)
+            shortcutField.font = Self.shortcutFont(for: self.metrics)
             let shortcutSize = shortcutField.intrinsicContentSize
-            let referenceWidth = Self.shortcutReferenceWidth(for: metrics)
+            let referenceWidth = Self.shortcutReferenceWidth(for: self.metrics)
             let shortcutColumnWidth = max(Self.minimumShortcutColumnWidth, referenceWidth, shortcutSize.width)
             let shortcutX = self.bounds.maxX
-                - metrics.trailingPadding
-                + metrics.shortcutXOffset
+                - self.metrics.trailingPadding
+                + self.metrics.shortcutXOffset
                 - referenceWidth
             shortcutField.frame = NSRect(
                 x: shortcutX,
-                y: floor((self.bounds.height - shortcutSize.height) / 2) + metrics.shortcutYOffset,
+                y: floor((self.bounds.height - shortcutSize.height) / 2) + self.metrics.shortcutYOffset,
                 width: shortcutColumnWidth,
                 height: shortcutSize.height)
             titleMaxX = shortcutX - Self.titleShortcutGap
@@ -372,7 +379,7 @@ final class PersistentRefreshMenuView: NSView, MenuCardHighlighting {
 
         baseImage.isTemplate = true
         self.iconView.image = baseImage
-        self.iconView.symbolConfiguration = Self.iconConfiguration(for: PersistentRefreshRowMetrics.defaults)
+        self.iconView.symbolConfiguration = Self.iconConfiguration(for: self.metrics)
         self.iconView.imageScaling = .scaleProportionallyDown
         self.iconView.contentTintColor = .labelColor
         self.addSubview(self.iconView)
@@ -384,7 +391,7 @@ final class PersistentRefreshMenuView: NSView, MenuCardHighlighting {
         self.configureTitleField(self.titleField)
 
         if let shortcutField {
-            shortcutField.font = Self.shortcutFont(for: PersistentRefreshRowMetrics.defaults)
+            shortcutField.font = Self.shortcutFont(for: self.metrics)
             self.configureShortcutField(shortcutField)
         }
     }
@@ -433,7 +440,20 @@ final class PersistentRefreshMenuView: NSView, MenuCardHighlighting {
     }
 
     private static func iconConfiguration(for metrics: PersistentRefreshRowMetrics) -> NSImage.SymbolConfiguration {
-        NSImage.SymbolConfiguration(pointSize: metrics.iconSymbolPointSize, weight: .regular)
+        NSImage.SymbolConfiguration(pointSize: metrics.iconSymbolPointSize, weight: self.iconWeight(for: metrics))
+    }
+
+    private static func iconWeight(for metrics: PersistentRefreshRowMetrics) -> NSFont.Weight {
+        switch Int(metrics.iconSymbolWeight.rounded()) {
+        case 1:
+            .medium
+        case 2:
+            .semibold
+        case 3:
+            .bold
+        default:
+            .regular
+        }
     }
 
     private static func shortcutFont(for metrics: PersistentRefreshRowMetrics) -> NSFont {

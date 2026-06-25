@@ -90,6 +90,12 @@ extension SettingsStore {
         _ = self.warpAPIToken
         _ = self.tokenAccountsByProvider
         _ = self.debugLoadingPattern
+        _ = self.debugMenuLayoutProbeScope
+        _ = self.debugMenuLayoutProbeAction
+        _ = self.debugMenuLayoutProbeIcon
+        _ = self.debugMenuLayoutProbeTitle
+        _ = self.debugMenuLayoutProbeItemEnabled
+        _ = self.debugMenuLayoutProbeIconPointSize
         _ = self.configRevision
         return 0
     }

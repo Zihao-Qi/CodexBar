@@ -73,6 +73,63 @@ struct DebugPane: View {
                 }
 
                 SettingsSection(
+                    title: "Refresh row tuning",
+                    caption: "Debug controls for the custom Refresh row. Reopen the menu after changing values.")
+                {
+                    ForEach(PersistentRefreshRowMetrics.Key.allCases) { key in
+                        self.refreshMetricSlider(key)
+                    }
+
+                    Button {
+                        self.settings.resetDebugPersistentRefreshMetrics()
+                    } label: {
+                        Label("Reset refresh row defaults", systemImage: "arrow.counterclockwise")
+                    }
+                    .controlSize(.small)
+                }
+
+                SettingsSection(
+                    title: "Native menu layout probe",
+                    caption: "Insert one visible native row to isolate why AppKit moves native menu columns. " +
+                        "Reopen the menu after changing values.")
+                {
+                    Picker("Scope", selection: self.$settings.debugMenuLayoutProbeScope) {
+                        ForEach(DebugMenuLayoutProbeScope.allCases) { scope in
+                            Text(scope.title).tag(scope)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    Picker("Action", selection: self.$settings.debugMenuLayoutProbeAction) {
+                        ForEach(DebugMenuLayoutProbeAction.allCases) { action in
+                            Text(action.title).tag(action)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    Picker("Icon", selection: self.$settings.debugMenuLayoutProbeIcon) {
+                        ForEach(DebugMenuLayoutProbeIcon.allCases) { icon in
+                            Text(icon.title).tag(icon)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    Picker("Title", selection: self.$settings.debugMenuLayoutProbeTitle) {
+                        ForEach(DebugMenuLayoutProbeTitle.allCases) { title in
+                            Text(title.title).tag(title)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    PreferenceToggleRow(
+                        title: "Enable probe row",
+                        subtitle: "Turn this off to test whether a disabled native row still changes layout.",
+                        binding: self.$settings.debugMenuLayoutProbeItemEnabled)
+
+                    self.probeIconSizeSlider()
+                }
+
+                SettingsSection(
                     title: L("section_loading_animations"),
                     caption: L("loading_animations_caption"))
                 {
@@ -507,6 +564,78 @@ struct DebugPane: View {
 
     private func postSessionNotification(_ transition: SessionQuotaTransition, provider: UsageProvider) {
         SessionQuotaNotifier().post(transition: transition, provider: provider, badge: 1)
+    }
+
+    private func refreshMetricSlider(_ key: PersistentRefreshRowMetrics.Key) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(key.title)
+                    .font(.body)
+                Text("Default \(Self.formatRefreshMetricValue(key.defaultValue, for: key))")
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
+            }
+            .frame(width: 190, alignment: .leading)
+
+            Slider(
+                value: Binding(
+                    get: { self.settings.debugPersistentRefreshMetric(key) },
+                    set: { self.settings.setDebugPersistentRefreshMetric(key, value: $0) }),
+                in: key.range,
+                step: key.step)
+
+            Text(Self.formatRefreshMetricValue(self.settings.debugPersistentRefreshMetric(key), for: key))
+                .font(.body.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(width: key == .iconSymbolWeight ? 78 : 56, alignment: .trailing)
+        }
+    }
+
+    private func probeIconSizeSlider() -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Probe icon size")
+                    .font(.body)
+                Text("Default \(Self.formatMetricValue(DebugMenuLayoutProbeIconSize.defaultValue))")
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
+            }
+            .frame(width: 190, alignment: .leading)
+
+            Slider(
+                value: self.$settings.debugMenuLayoutProbeIconPointSize,
+                in: DebugMenuLayoutProbeIconSize.range,
+                step: DebugMenuLayoutProbeIconSize.step)
+
+            Text(Self.formatMetricValue(self.settings.debugMenuLayoutProbeIconPointSize))
+                .font(.body.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(width: 56, alignment: .trailing)
+        }
+    }
+
+    private static func formatMetricValue(_ value: Double) -> String {
+        if abs(value.rounded() - value) < 0.001 {
+            return "\(Int(value.rounded())) pt"
+        }
+        return String(format: "%.1f pt", value)
+    }
+
+    private static func formatRefreshMetricValue(_ value: Double, for key: PersistentRefreshRowMetrics.Key) -> String {
+        guard key == .iconSymbolWeight else {
+            return self.formatMetricValue(value)
+        }
+
+        switch Int(value.rounded()) {
+        case 1:
+            return "Medium"
+        case 2:
+            return "Semibold"
+        case 3:
+            return "Bold"
+        default:
+            return "Regular"
+        }
     }
 
     private func clearCostCache() async {

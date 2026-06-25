@@ -344,6 +344,8 @@ extension SettingsStore {
             userDefaults.set(debugLogLevelRaw, forKey: "debugLogLevel")
         }
         let debugLoadingPatternRaw = userDefaults.string(forKey: "debugLoadingPattern")
+        let debugPersistentRefreshMetricsRaw = Self.loadDebugPersistentRefreshMetrics(userDefaults: userDefaults)
+        let debugMenuLayoutProbe = Self.loadDebugMenuLayoutProbeDefaults(userDefaults: userDefaults)
         let debugKeepCLISessionsAlive = userDefaults.object(forKey: "debugKeepCLISessionsAlive") as? Bool ?? false
         let statusChecksEnabled = userDefaults.object(forKey: "statusChecksEnabled") as? Bool ?? true
         let sessionQuotaDefault = userDefaults.object(forKey: "sessionQuotaNotificationsEnabled") as? Bool
@@ -425,6 +427,8 @@ extension SettingsStore {
             debugFileLoggingEnabled: debugFileLoggingEnabled,
             debugLogLevelRaw: debugLogLevelRaw,
             debugLoadingPatternRaw: debugLoadingPatternRaw,
+            debugPersistentRefreshMetricsRaw: debugPersistentRefreshMetricsRaw,
+            debugMenuLayoutProbe: debugMenuLayoutProbe,
             debugKeepCLISessionsAlive: debugKeepCLISessionsAlive,
             statusChecksEnabled: statusChecksEnabled,
             sessionQuotaNotificationsEnabled: sessionQuotaNotificationsEnabled,
@@ -472,6 +476,37 @@ extension SettingsStore {
             providersSortedAlphabetically: providersSortedAlphabetically,
             appLanguageRaw: appLanguageRaw,
             terminalAppRaw: userDefaults.string(forKey: "terminalApp"))
+    }
+
+    private static func loadDebugPersistentRefreshMetrics(userDefaults: UserDefaults) -> [String: Double] {
+        let stored = userDefaults.dictionary(forKey: "debugPersistentRefreshMetrics") ?? [:]
+        return Dictionary(uniqueKeysWithValues: stored.compactMap { key, value in
+            if let value = value as? Double {
+                return (key, value)
+            }
+            if let number = value as? NSNumber {
+                return (key, number.doubleValue)
+            }
+            return nil
+        })
+    }
+
+    private static func loadDebugMenuLayoutProbeDefaults(userDefaults: UserDefaults) -> DebugMenuLayoutProbeDefaults {
+        let storedIconPointSize = userDefaults.object(forKey: "debugMenuLayoutProbeIconPointSize")
+        let iconPointSize = (storedIconPointSize as? Double)
+            ?? (storedIconPointSize as? NSNumber)?.doubleValue
+            ?? DebugMenuLayoutProbeIconSize.defaultValue
+        return DebugMenuLayoutProbeDefaults(
+            scopeRaw: userDefaults.string(forKey: "debugMenuLayoutProbeScope") ??
+                DebugMenuLayoutProbeScope.off.rawValue,
+            actionRaw: userDefaults.string(forKey: "debugMenuLayoutProbeAction") ??
+                DebugMenuLayoutProbeAction.dashboard.rawValue,
+            iconRaw: userDefaults.string(forKey: "debugMenuLayoutProbeIcon") ??
+                DebugMenuLayoutProbeIcon.actionDefault.rawValue,
+            titleRaw: userDefaults.string(forKey: "debugMenuLayoutProbeTitle") ??
+                DebugMenuLayoutProbeTitle.short.rawValue,
+            itemEnabled: userDefaults.object(forKey: "debugMenuLayoutProbeItemEnabled") as? Bool ?? true,
+            iconPointSize: DebugMenuLayoutProbeIconSize.sanitized(iconPointSize))
     }
 
     private static func loadMenuBarMetricPreferences(userDefaults: UserDefaults) -> [String: String] {

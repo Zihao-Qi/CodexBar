@@ -71,6 +71,29 @@ struct MenuContent: View {
                 }
             }
             .buttonStyle(.plain)
+        case let .debugLayoutProbe(title, action, systemImageName, isEnabled, iconPointSize):
+            Button {
+                self.perform(action)
+            } label: {
+                if let systemImageName {
+                    HStack(spacing: 8) {
+                        Image(systemName: systemImageName)
+                            .font(.system(size: CGFloat(iconPointSize)))
+                            .imageScale(.medium)
+                            .frame(width: 18, alignment: .center)
+                        Text(title)
+                    }
+                    .foregroundStyle(isEnabled ? .primary : .secondary)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(title)
+                } else {
+                    Text(title)
+                        .foregroundStyle(isEnabled ? .primary : .secondary)
+                        .accessibilityLabel(title)
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(!isEnabled)
         case let .submenu(title, systemImageName, submenuItems):
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
@@ -163,6 +186,95 @@ struct MenuActions {
 }
 
 struct PersistentRefreshRowMetrics: Equatable {
+    enum Key: String, CaseIterable, Identifiable {
+        case rowHeight
+        case selectionHorizontalInset
+        case selectionVerticalInset
+        case selectionCornerRadius
+        case leadingPadding
+        case trailingPadding
+        case iconWidth
+        case iconSymbolPointSize
+        case iconSymbolWeight
+        case iconTitleSpacing
+        case shortcutFontSize
+        case shortcutXOffset
+        case shortcutYOffset
+
+        var id: String {
+            self.rawValue
+        }
+
+        var title: String {
+            switch self {
+            case .rowHeight: "Row height"
+            case .selectionHorizontalInset: "Selection horizontal inset"
+            case .selectionVerticalInset: "Selection vertical inset"
+            case .selectionCornerRadius: "Selection corner radius"
+            case .leadingPadding: "Leading padding"
+            case .trailingPadding: "Trailing padding"
+            case .iconWidth: "Icon width"
+            case .iconSymbolPointSize: "Icon point size"
+            case .iconSymbolWeight: "Icon weight"
+            case .iconTitleSpacing: "Icon-title spacing"
+            case .shortcutFontSize: "Shortcut font size"
+            case .shortcutXOffset: "Shortcut X offset"
+            case .shortcutYOffset: "Shortcut Y offset"
+            }
+        }
+
+        var range: ClosedRange<Double> {
+            switch self {
+            case .rowHeight: 18...30
+            case .selectionHorizontalInset: 0...10
+            case .selectionVerticalInset: 0...4
+            case .selectionCornerRadius: 0...10
+            case .leadingPadding: 8...20
+            case .trailingPadding: 0...16
+            case .iconWidth: 12...22
+            case .iconSymbolPointSize: 8...16
+            case .iconSymbolWeight: 0...3
+            case .iconTitleSpacing: 0...10
+            case .shortcutFontSize: 10...16
+            case .shortcutXOffset: -24...4
+            case .shortcutYOffset: -4...4
+            }
+        }
+
+        var step: Double {
+            switch self {
+            case .iconTitleSpacing:
+                0.5
+            default:
+                1
+            }
+        }
+
+        var defaultValue: Double {
+            let defaults = PersistentRefreshRowMetrics.defaults
+            return switch self {
+            case .rowHeight: Double(defaults.rowHeight)
+            case .selectionHorizontalInset: Double(defaults.selectionHorizontalInset)
+            case .selectionVerticalInset: Double(defaults.selectionVerticalInset)
+            case .selectionCornerRadius: Double(defaults.selectionCornerRadius)
+            case .leadingPadding: Double(defaults.leadingPadding)
+            case .trailingPadding: Double(defaults.trailingPadding)
+            case .iconWidth: Double(defaults.iconWidth)
+            case .iconSymbolPointSize: Double(defaults.iconSymbolPointSize)
+            case .iconSymbolWeight: Double(defaults.iconSymbolWeight)
+            case .iconTitleSpacing: Double(defaults.iconTitleSpacing)
+            case .shortcutFontSize: Double(defaults.shortcutFontSize)
+            case .shortcutXOffset: Double(defaults.shortcutXOffset)
+            case .shortcutYOffset: Double(defaults.shortcutYOffset)
+            }
+        }
+
+        func sanitized(_ value: Double) -> Double {
+            let clamped = min(max(value, self.range.lowerBound), self.range.upperBound)
+            return (clamped / self.step).rounded() * self.step
+        }
+    }
+
     static let defaults = Self(
         rowHeight: 24,
         selectionHorizontalInset: 5,
@@ -173,6 +285,7 @@ struct PersistentRefreshRowMetrics: Equatable {
         trailingPadding: 8,
         iconWidth: 17,
         iconSymbolPointSize: 11,
+        iconSymbolWeight: 0,
         iconTitleSpacing: 4.5,
         shortcutFontSize: 13,
         shortcutXOffset: -12,
@@ -186,10 +299,82 @@ struct PersistentRefreshRowMetrics: Equatable {
     let trailingPadding: CGFloat
     let iconWidth: CGFloat
     let iconSymbolPointSize: CGFloat
+    let iconSymbolWeight: CGFloat
     let iconTitleSpacing: CGFloat
     let shortcutFontSize: CGFloat
     let shortcutXOffset: CGFloat
     let shortcutYOffset: CGFloat
+
+    init(
+        rowHeight: CGFloat,
+        selectionHorizontalInset: CGFloat,
+        selectionVerticalInset: CGFloat,
+        selectionCornerRadius: CGFloat,
+        leadingPadding: CGFloat,
+        trailingPadding: CGFloat,
+        iconWidth: CGFloat,
+        iconSymbolPointSize: CGFloat,
+        iconSymbolWeight: CGFloat,
+        iconTitleSpacing: CGFloat,
+        shortcutFontSize: CGFloat,
+        shortcutXOffset: CGFloat,
+        shortcutYOffset: CGFloat)
+    {
+        self.rowHeight = rowHeight
+        self.selectionHorizontalInset = selectionHorizontalInset
+        self.selectionVerticalInset = selectionVerticalInset
+        self.selectionCornerRadius = selectionCornerRadius
+        self.leadingPadding = leadingPadding
+        self.trailingPadding = trailingPadding
+        self.iconWidth = iconWidth
+        self.iconSymbolPointSize = iconSymbolPointSize
+        self.iconSymbolWeight = iconSymbolWeight
+        self.iconTitleSpacing = iconTitleSpacing
+        self.shortcutFontSize = shortcutFontSize
+        self.shortcutXOffset = shortcutXOffset
+        self.shortcutYOffset = shortcutYOffset
+    }
+
+    init(overrides: [String: Double], defaultMetrics: Self = .defaults) {
+        self.init(
+            rowHeight: CGFloat(Self.value(.rowHeight, overrides: overrides, defaults: defaultMetrics)),
+            selectionHorizontalInset: CGFloat(
+                Self.value(.selectionHorizontalInset, overrides: overrides, defaults: defaultMetrics)),
+            selectionVerticalInset: CGFloat(
+                Self.value(.selectionVerticalInset, overrides: overrides, defaults: defaultMetrics)),
+            selectionCornerRadius: CGFloat(
+                Self.value(.selectionCornerRadius, overrides: overrides, defaults: defaultMetrics)),
+            leadingPadding: CGFloat(Self.value(.leadingPadding, overrides: overrides, defaults: defaultMetrics)),
+            trailingPadding: CGFloat(Self.value(.trailingPadding, overrides: overrides, defaults: defaultMetrics)),
+            iconWidth: CGFloat(Self.value(.iconWidth, overrides: overrides, defaults: defaultMetrics)),
+            iconSymbolPointSize: CGFloat(
+                Self.value(.iconSymbolPointSize, overrides: overrides, defaults: defaultMetrics)),
+            iconSymbolWeight: CGFloat(Self.value(.iconSymbolWeight, overrides: overrides, defaults: defaultMetrics)),
+            iconTitleSpacing: CGFloat(Self.value(.iconTitleSpacing, overrides: overrides, defaults: defaultMetrics)),
+            shortcutFontSize: CGFloat(Self.value(.shortcutFontSize, overrides: overrides, defaults: defaultMetrics)),
+            shortcutXOffset: CGFloat(Self.value(.shortcutXOffset, overrides: overrides, defaults: defaultMetrics)),
+            shortcutYOffset: CGFloat(Self.value(.shortcutYOffset, overrides: overrides, defaults: defaultMetrics)))
+    }
+
+    private static func value(_ key: Key, overrides: [String: Double], defaults: Self) -> Double {
+        let fallback = switch key {
+        case .rowHeight: Double(defaults.rowHeight)
+        case .selectionHorizontalInset: Double(defaults.selectionHorizontalInset)
+        case .selectionVerticalInset: Double(defaults.selectionVerticalInset)
+        case .selectionCornerRadius: Double(defaults.selectionCornerRadius)
+        case .leadingPadding: Double(defaults.leadingPadding)
+        case .trailingPadding: Double(defaults.trailingPadding)
+        case .iconWidth: Double(defaults.iconWidth)
+        case .iconSymbolPointSize: Double(defaults.iconSymbolPointSize)
+        case .iconSymbolWeight: Double(defaults.iconSymbolWeight)
+        case .iconTitleSpacing: Double(defaults.iconTitleSpacing)
+        case .shortcutFontSize: Double(defaults.shortcutFontSize)
+        case .shortcutXOffset: Double(defaults.shortcutXOffset)
+        case .shortcutYOffset: Double(defaults.shortcutYOffset)
+        }
+        guard let override = overrides[key.rawValue] else { return fallback }
+        return key.sanitized(override)
+    }
 }
 
 @MainActor

@@ -1008,10 +1008,48 @@ extension StatusMenuPersistentRefreshTests {
         #expect(metrics.trailingPadding == 8)
         #expect(metrics.iconWidth == 17)
         #expect(metrics.iconSymbolPointSize == 11)
+        #expect(metrics.iconSymbolWeight == 0)
         #expect(metrics.iconTitleSpacing == 4.5)
         #expect(metrics.shortcutFontSize == 13)
         #expect(metrics.shortcutXOffset == -12)
         #expect(metrics.shortcutYOffset == 0)
+    }
+
+    @Test
+    func `debug refresh row metric overrides apply to refresh layout`() throws {
+        let previousRendering = StatusItemController.menuCardRenderingEnabled
+        StatusItemController.menuCardRenderingEnabled = true
+        defer { StatusItemController.menuCardRenderingEnabled = previousRendering }
+
+        let settings = self.makeSettings()
+        settings.refreshFrequency = .manual
+        settings.mergeIcons = false
+        settings.setDebugPersistentRefreshMetric(.leadingPadding, value: 18)
+        settings.setDebugPersistentRefreshMetric(.iconWidth, value: 19)
+        settings.setDebugPersistentRefreshMetric(.iconSymbolWeight, value: 2)
+        settings.setDebugPersistentRefreshMetric(.iconTitleSpacing, value: 6.5)
+        settings.setDebugPersistentRefreshMetric(.shortcutFontSize, value: 12)
+
+        let controller = self.makeController(settings: settings)
+        let menu = controller.makeMenu(for: .codex)
+        controller.menuWillOpen(menu)
+
+        let refreshItem = try #require(menu.items.first { $0.title == "Refresh" })
+        let refreshView = try #require(refreshItem.view as? PersistentRefreshMenuView)
+        refreshView.applySize(width: 320, height: settings.debugPersistentRefreshMetrics.rowHeight)
+        refreshView.layoutSubtreeIfNeeded()
+
+        let iconView = try #require(refreshView.subviews.compactMap { $0 as? NSImageView }.first)
+        let titleField = try #require(
+            refreshView.subviews.compactMap { $0 as? NSTextField }.first { $0.stringValue == "Refresh" })
+        let shortcutField = try #require(
+            refreshView.subviews.compactMap { $0 as? NSTextField }.first { $0.stringValue == "⌘ R" })
+
+        #expect(iconView.frame.minX == 18)
+        #expect(iconView.frame.width == 19)
+        #expect(refreshView.metricsForLayout.iconSymbolWeight == 2)
+        #expect(titleField.frame.minX == 18 + 19 + 6.5)
+        #expect(abs((shortcutField.font?.pointSize ?? 0) - 12) < 0.001)
     }
 
     @Test

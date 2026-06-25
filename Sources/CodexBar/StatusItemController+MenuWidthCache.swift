@@ -88,6 +88,9 @@ extension StatusItemController {
             "text:\(style):\(text)"
         case let .action(title, action):
             "action:\(title):\(self.measuredStandardMenuWidthCacheToken(for: action))"
+        case let .debugLayoutProbe(title, action, systemImageName, isEnabled, iconPointSize):
+            "debugLayoutProbe:\(title):\(self.measuredStandardMenuWidthCacheToken(for: action)):" +
+                "\(systemImageName ?? ""):\(isEnabled ? "1" : "0"):\(iconPointSize)"
         case let .submenu(title, systemImageName, submenuItems):
             "submenu:\(title):\(systemImageName ?? ""):" + submenuItems.map { item in
                 [

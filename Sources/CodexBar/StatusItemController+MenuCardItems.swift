@@ -7,7 +7,7 @@ extension StatusItemController {
         for item in menu.items {
             if let view = item.view as? PersistentRefreshMenuView {
                 guard abs(view.frame.width - width) > 0.5 else { continue }
-                view.applySize(width: width, height: PersistentRefreshRowMetrics.defaults.rowHeight)
+                view.applySize(width: width, height: view.metricsForLayout.rowHeight)
                 continue
             }
             guard let view = item.view, view is any MenuCardMeasuring else { continue }

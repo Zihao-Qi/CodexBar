@@ -3,11 +3,12 @@ import AppKit
 extension StatusItemController {
     func makePersistentRefreshItem(title: String, menu: NSMenu, width: CGFloat) -> NSMenuItem {
         let shortcutText = self.shortcut(for: .refresh).map(Self.shortcutDisplayLabel)
-        let metrics = PersistentRefreshRowMetrics.defaults
+        let metrics = self.settings.debugPersistentRefreshMetrics
         let view = PersistentRefreshMenuView(
             title: title,
             systemImageName: MenuDescriptor.MenuAction.refresh.systemImageName,
             shortcutText: shortcutText,
+            metrics: metrics,
             onClick: { [weak self, weak menu] in
                 guard let self, let menu else { return }
                 self.performPersistentRefreshAction(in: ObjectIdentifier(menu))
