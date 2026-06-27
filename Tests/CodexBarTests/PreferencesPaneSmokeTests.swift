@@ -11,7 +11,7 @@ struct PreferencesPaneSmokeTests {
         let settings = Self.makeSettingsStore(suite: "PreferencesPaneSmokeTests-default")
         let store = Self.makeUsageStore(settings: settings)
 
-        _ = GeneralPane(settings: settings, store: store).body
+        _ = GeneralPane(settings: settings).body
         _ = DisplayPane(settings: settings, store: store).body
         _ = AdvancedPane(settings: settings).body
         _ = ProvidersPane(settings: settings, store: store).body
@@ -36,7 +36,7 @@ struct PreferencesPaneSmokeTests {
         let store = Self.makeUsageStore(settings: settings)
         store._setErrorForTesting("Example error", provider: .codex)
 
-        _ = GeneralPane(settings: settings, store: store).body
+        _ = GeneralPane(settings: settings).body
         _ = DisplayPane(settings: settings, store: store).body
         _ = AdvancedPane(settings: settings).body
         _ = ProvidersPane(settings: settings, store: store).body
@@ -58,8 +58,11 @@ struct PreferencesPaneSmokeTests {
 
         settings.costUsageHistoryDays = 999
         #expect(settings.costUsageHistoryDays == 365)
-        #expect(CostHistoryDaysEditor.title(days: 365).contains("365"))
-        #expect(!CostHistoryDaysEditor.title(days: 365).contains("%d"))
+        #expect(CostHistoryDaysEditor.title() == L("cost_history_window_title"))
+        #expect(CostHistoryDaysEditor.helpText() == L("cost_history_window_help"))
+        #expect(CostHistoryDaysEditor.valueLabel(days: 365).contains("365"))
+        #expect(!CostHistoryDaysEditor.valueLabel(days: 365).contains("%d"))
+        #expect(CostHistoryDaysEditor.dayOptions(currentDays: 42).contains(42))
 
         _ = CostHistoryDaysEditor(settings: settings).body
     }

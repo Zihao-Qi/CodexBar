@@ -61,7 +61,6 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 @MainActor
 struct GeneralPane: View {
     @Bindable var settings: SettingsStore
-    @Bindable var store: UsageStore
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
@@ -142,32 +141,33 @@ struct GeneralPane: View {
                                 .fixedSize(horizontal: false, vertical: true)
 
                             if self.settings.costUsageEnabled {
-                                VStack(alignment: .leading, spacing: 10) {
-                                    HStack(alignment: .center, spacing: 12) {
-                                        Text(L("cost_summary_style_title"))
-                                            .font(.body)
-                                        Spacer()
-                                        Picker(
-                                            L("cost_summary_style_title"),
-                                            selection: self.$settings.costSummaryDisplayStyle)
-                                        {
-                                            ForEach(CostSummaryDisplayStyle.allCases) { style in
-                                                Text(style.label).tag(style)
+                                VStack(alignment: .leading, spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack(alignment: .center, spacing: 12) {
+                                            Text(L("cost_summary_style_title"))
+                                                .font(.body)
+                                            Spacer(minLength: 16)
+                                            Picker(
+                                                L("cost_summary_style_title"),
+                                                selection: self.$settings.costSummaryDisplayStyle)
+                                            {
+                                                ForEach(CostSummaryDisplayStyle.allCases) { style in
+                                                    Text(style.label).tag(style)
+                                                }
                                             }
+                                            .labelsHidden()
+                                            .pickerStyle(.menu)
+                                            .frame(width: CostSummarySettingsLayout.controlWidth)
                                         }
-                                        .labelsHidden()
-                                        .pickerStyle(.menu)
-                                        .frame(maxWidth: 180)
+
+                                        Text(self.settings.costSummaryDisplayStyle.helpText)
+                                            .font(.footnote)
+                                            .foregroundStyle(.tertiary)
+                                            .fixedSize(horizontal: false, vertical: true)
                                     }
+                                    .padding(.top, 4)
 
                                     CostHistoryDaysEditor(settings: self.settings)
-
-                                    Text(L("cost_auto_refresh_info"))
-                                        .font(.footnote)
-                                        .foregroundStyle(.tertiary)
-
-                                    self.costStatusLine(provider: .claude)
-                                    self.costStatusLine(provider: .codex)
                                 }
                                 .padding(.leading, 20)
                             }
@@ -240,89 +240,57 @@ struct GeneralPane: View {
             .padding(.vertical, 12)
         }
     }
+}
 
-    private func costStatusLine(provider: UsageProvider) -> some View {
-        let name = ProviderDescriptorRegistry.descriptor(for: provider).metadata.displayName
-
-        guard provider == .claude || provider == .codex else {
-            return Text(String(format: L("cost_status_unsupported"), name))
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-        }
-
-        if self.store.isTokenRefreshInFlight(for: provider) {
-            let elapsed: String = {
-                guard let startedAt = self.store.tokenLastAttemptAt(for: provider) else { return "" }
-                let seconds = max(0, Date().timeIntervalSince(startedAt))
-                let formatter = DateComponentsFormatter()
-                formatter.allowedUnits = seconds < 60 ? [.second] : [.minute, .second]
-                formatter.unitsStyle = .abbreviated
-                return formatter.string(from: seconds).map { " (\($0))" } ?? ""
-            }()
-            return Text(String(format: L("cost_status_fetching"), name, elapsed))
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-        }
-        if let snapshot = self.store.tokenSnapshot(for: provider) {
-            let updated = UsageFormatter.updatedString(from: snapshot.updatedAt)
-            let cost = snapshot.last30DaysCostUSD
-                .map { UsageFormatter.currencyString($0, currencyCode: snapshot.currencyCode) } ?? "—"
-            let window = snapshot.historyLabel ?? (snapshot.historyDays == 1 ? "today" : "\(snapshot.historyDays)d")
-            return Text(String(format: L("cost_status_snapshot"), name, updated, window, cost))
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-        }
-        if let error = self.store.tokenError(for: provider), !error.isEmpty {
-            let truncated = UsageFormatter.truncatedSingleLine(error, max: 120)
-            return Text(String(format: L("cost_status_error"), name, truncated))
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-        }
-        if let lastAttempt = self.store.tokenLastAttemptAt(for: provider) {
-            let rel = RelativeDateTimeFormatter()
-            rel.locale = Locale(identifier: "en_US")
-            rel.unitsStyle = .abbreviated
-            let when = rel.localizedString(for: lastAttempt, relativeTo: Date())
-            return Text(String(format: L("cost_status_last_attempt"), name, when))
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-        }
-        return Text(String(format: L("cost_status_no_data"), name))
-            .font(.footnote)
-            .foregroundStyle(.tertiary)
-    }
+private enum CostSummarySettingsLayout {
+    static let controlWidth: CGFloat = 210
 }
 
 @MainActor
 struct CostHistoryDaysEditor: View {
     @Bindable var settings: SettingsStore
 
-    static func title(days: Int) -> String {
-        String(format: L("cost_history_days_title"), days)
+    static let standardDayOptions = [7, 14, 30, 60, 90, 180, 365]
+
+    static func title() -> String {
+        L("cost_history_window_title")
+    }
+
+    static func helpText() -> String {
+        L("cost_history_window_help")
+    }
+
+    static func valueLabel(days: Int) -> String {
+        days == 1 ? L("Today") : String(format: L("Last %d days"), days)
+    }
+
+    static func dayOptions(currentDays: Int) -> [Int] {
+        let currentDays = max(1, min(365, currentDays))
+        return Array(Set(Self.standardDayOptions + [currentDays])).sorted()
     }
 
     var body: some View {
-        let title = Self.title(days: self.settings.costUsageHistoryDays)
+        let title = Self.title()
 
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Stepper(
-                value: self.$settings.costUsageHistoryDays,
-                in: 1...365,
-                step: 1)
-            {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .center, spacing: 12) {
                 Text(title)
-                    .font(.footnote)
+                    .font(.body)
+                Spacer(minLength: 16)
+                Picker(title, selection: self.$settings.costUsageHistoryDays) {
+                    ForEach(Self.dayOptions(currentDays: self.settings.costUsageHistoryDays), id: \.self) { days in
+                        Text(Self.valueLabel(days: days)).tag(days)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(width: CostSummarySettingsLayout.controlWidth)
             }
 
-            TextField(
-                title,
-                value: self.$settings.costUsageHistoryDays,
-                format: .number)
-                .labelsHidden()
-                .textFieldStyle(.roundedBorder)
+            Text(Self.helpText())
                 .font(.footnote)
-                .monospacedDigit()
-                .frame(width: 64)
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

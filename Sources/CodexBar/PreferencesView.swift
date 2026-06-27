@@ -95,7 +95,7 @@ struct PreferencesView: View {
 
     var body: some View {
         TabView(selection: self.tabSelectionBinding) {
-            GeneralPane(settings: self.settings, store: self.store)
+            GeneralPane(settings: self.settings)
                 .tabItem { Label(L("tab_general"), systemImage: "gearshape") }
                 .tag(PreferencesTab.general)
 

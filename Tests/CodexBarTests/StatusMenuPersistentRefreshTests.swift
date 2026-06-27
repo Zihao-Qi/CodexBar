@@ -983,7 +983,9 @@ struct StatusMenuPersistentRefreshTests {
         #expect(recorder.settingsCount == 1)
         #expect(recorder.quitCount == 1)
     }
+}
 
+extension StatusMenuPersistentRefreshTests {
     private func keyEvent(_ characters: String, keyCode: UInt16) throws -> NSEvent {
         try #require(NSEvent.keyEvent(
             with: .keyDown,
@@ -997,9 +999,7 @@ struct StatusMenuPersistentRefreshTests {
             isARepeat: false,
             keyCode: keyCode))
     }
-}
 
-extension StatusMenuPersistentRefreshTests {
     @Test
     func `refresh row metrics match tuned native-style values`() {
         let metrics = PersistentRefreshRowMetrics.defaults

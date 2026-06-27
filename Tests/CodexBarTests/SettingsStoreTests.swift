@@ -1396,4 +1396,33 @@ struct SettingsStoreTests {
         #expect(store.costSummaryDisplayStyle == .both)
         #expect(defaults.string(forKey: "costSummaryDisplayStyle") == CostSummaryDisplayStyle.both.rawValue)
     }
+
+    @Test
+    func `enabling cost summary persists inline display style before relaunch`() throws {
+        let suite = "SettingsStoreTests-cost-summary-display-style-enable"
+        let defaultsA = try #require(UserDefaults(suiteName: suite))
+        defaultsA.removePersistentDomain(forName: suite)
+        let configStore = testConfigStore(suiteName: suite)
+        let storeA = SettingsStore(
+            userDefaults: defaultsA,
+            configStore: configStore,
+            zaiTokenStore: NoopZaiTokenStore(),
+            syntheticTokenStore: NoopSyntheticTokenStore())
+
+        #expect(storeA.costSummaryDisplayStyle == .inlineSummary)
+        #expect(defaultsA.string(forKey: "costSummaryDisplayStyle") == nil)
+
+        storeA.costUsageEnabled = true
+
+        #expect(defaultsA.string(forKey: "costSummaryDisplayStyle") == CostSummaryDisplayStyle.inlineSummary.rawValue)
+
+        let defaultsB = try #require(UserDefaults(suiteName: suite))
+        let storeB = SettingsStore(
+            userDefaults: defaultsB,
+            configStore: configStore,
+            zaiTokenStore: NoopZaiTokenStore(),
+            syntheticTokenStore: NoopSyntheticTokenStore())
+
+        #expect(storeB.costSummaryDisplayStyle == .inlineSummary)
+    }
 }

@@ -309,6 +309,9 @@ extension SettingsStore {
         set {
             self.defaultsState.costUsageEnabled = newValue
             self.userDefaults.set(newValue, forKey: "tokenCostUsageEnabled")
+            if newValue, self.userDefaults.object(forKey: "costSummaryDisplayStyle") == nil {
+                self.costSummaryDisplayStyle = .inlineSummary
+            }
         }
     }
 
