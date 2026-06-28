@@ -1110,6 +1110,33 @@ struct SettingsStoreTests {
     }
 
     @Test
+    func `menu observation token updates on cost summary display style changes`() async throws {
+        let suite = "SettingsStoreTests-observation-cost-summary-display-style"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        let configStore = testConfigStore(suiteName: suite)
+
+        let store = SettingsStore(
+            userDefaults: defaults,
+            configStore: configStore,
+            zaiTokenStore: NoopZaiTokenStore(),
+            syntheticTokenStore: NoopSyntheticTokenStore())
+
+        let didChange = ObservationFlag()
+
+        withObservationTracking {
+            _ = store.menuObservationToken
+        } onChange: {
+            didChange.set()
+        }
+
+        store.costSummaryDisplayStyle = .costSubmenu
+        try? await Task.sleep(nanoseconds: 50_000_000)
+
+        #expect(didChange.get() == true)
+    }
+
+    @Test
     func `menu observation token ignores merged switcher selection churn`() async throws {
         let suite = "SettingsStoreTests-observation-switcher-selection"
         let defaults = try #require(UserDefaults(suiteName: suite))
@@ -1350,7 +1377,7 @@ struct SettingsStoreTests {
     }
 
     @Test
-    func `cost summary display style defaults to inline and persists`() throws {
+    func `cost summary display style defaults to both and persists`() throws {
         let suite = "SettingsStoreTests-cost-summary-display-style"
         let defaultsA = try #require(UserDefaults(suiteName: suite))
         defaultsA.removePersistentDomain(forName: suite)
@@ -1361,7 +1388,7 @@ struct SettingsStoreTests {
             zaiTokenStore: NoopZaiTokenStore(),
             syntheticTokenStore: NoopSyntheticTokenStore())
 
-        #expect(storeA.costSummaryDisplayStyle == .inlineSummary)
+        #expect(storeA.costSummaryDisplayStyle == .both)
 
         storeA.costSummaryDisplayStyle = .costSubmenu
 
@@ -1375,7 +1402,7 @@ struct SettingsStoreTests {
         #expect(storeB.costSummaryDisplayStyle == .costSubmenu)
 
         storeB.costSummaryDisplayStyleRaw = "legacy-style"
-        #expect(storeB.costSummaryDisplayStyle == .inlineSummary)
+        #expect(storeB.costSummaryDisplayStyle == .both)
     }
 
     @Test
@@ -1398,7 +1425,7 @@ struct SettingsStoreTests {
     }
 
     @Test
-    func `enabling cost summary persists inline display style before relaunch`() throws {
+    func `enabling cost summary preserves both display style across relaunch`() throws {
         let suite = "SettingsStoreTests-cost-summary-display-style-enable"
         let defaultsA = try #require(UserDefaults(suiteName: suite))
         defaultsA.removePersistentDomain(forName: suite)
@@ -1409,12 +1436,13 @@ struct SettingsStoreTests {
             zaiTokenStore: NoopZaiTokenStore(),
             syntheticTokenStore: NoopSyntheticTokenStore())
 
-        #expect(storeA.costSummaryDisplayStyle == .inlineSummary)
+        #expect(storeA.costSummaryDisplayStyle == .both)
         #expect(defaultsA.string(forKey: "costSummaryDisplayStyle") == nil)
 
         storeA.costUsageEnabled = true
 
-        #expect(defaultsA.string(forKey: "costSummaryDisplayStyle") == CostSummaryDisplayStyle.inlineSummary.rawValue)
+        #expect(storeA.costSummaryDisplayStyle == .both)
+        #expect(defaultsA.string(forKey: "costSummaryDisplayStyle") == nil)
 
         let defaultsB = try #require(UserDefaults(suiteName: suite))
         let storeB = SettingsStore(
@@ -1423,6 +1451,6 @@ struct SettingsStoreTests {
             zaiTokenStore: NoopZaiTokenStore(),
             syntheticTokenStore: NoopSyntheticTokenStore())
 
-        #expect(storeB.costSummaryDisplayStyle == .inlineSummary)
+        #expect(storeB.costSummaryDisplayStyle == .both)
     }
 }

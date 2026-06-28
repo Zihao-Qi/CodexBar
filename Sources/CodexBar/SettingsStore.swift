@@ -516,15 +516,16 @@ extension SettingsStore {
         userDefaults: UserDefaults,
         costUsageEnabled: Bool) -> String
     {
-        if let storedCostSummaryDisplayStyle = userDefaults.string(forKey: "costSummaryDisplayStyle") {
+        if let storedCostSummaryDisplayStyle = userDefaults.string(forKey: "costSummaryDisplayStyle"),
+           CostSummaryDisplayStyle(rawValue: storedCostSummaryDisplayStyle) != nil
+        {
             return storedCostSummaryDisplayStyle
         }
-        if costUsageEnabled {
-            let migratedStyle = CostSummaryDisplayStyle.both.rawValue
+        let migratedStyle = CostSummaryDisplayStyle.both.rawValue
+        if costUsageEnabled || userDefaults.object(forKey: "costSummaryDisplayStyle") != nil {
             userDefaults.set(migratedStyle, forKey: "costSummaryDisplayStyle")
-            return migratedStyle
         }
-        return CostSummaryDisplayStyle.inlineSummary.rawValue
+        return migratedStyle
     }
 
     private static func loadMenuBarMetricPreferences(userDefaults: UserDefaults) -> [String: String] {
