@@ -5,6 +5,7 @@
 ### Added
 
 - Overview: choose Detailed or Compact in Menu settings, with labeled usage bars, the existing provider navigation, and useful details for providers without quota bars (#2616). Thanks @Zihao-Qi!
+- Provider cards: hide individual detail sections from Visible usage items, preserving choices across language changes and restarts (#3638). Thanks @elijah7x!
 
 ### Fixed
 
