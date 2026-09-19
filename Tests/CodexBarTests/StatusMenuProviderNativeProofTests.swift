@@ -240,6 +240,8 @@ final class StatusMenuProviderNativeProofTests: XCTestCase {
             "swiftUIHighlighted": String(overviewRow?.highlightState.isHighlighted ?? false),
             "pid": String(ProcessInfo.processInfo.processIdentifier),
             "window": String(host.windowNumber),
+            "menuWindow": String(menu.items.compactMap { $0.view?.window?.windowNumber }.first ?? 0),
+            "overviewLayout": fixture.settings.mergedOverviewLayout.rawValue,
             "selected": fixture.settings.selectedMenuProvider?.rawValue ?? "none",
             "overview": String(fixture.settings.mergedMenuLastSelectedWasOverview),
             "highlighted": menu.highlightedItem?.representedObject as? String ?? "none",
