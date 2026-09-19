@@ -2,6 +2,10 @@
 
 ## 0.61.1 — Unreleased
 
+### Added
+
+- Overview: choose Detailed or Compact in Menu settings, with labeled usage bars, the existing provider navigation, and useful details for providers without quota bars (#2616). Thanks @Zihao-Qi!
+
 ### Fixed
 
 - Codex costs: recover excess cached request rows from their original session files, retain pricing through interrupted scans, and avoid guessing request boundaries or conflicting prices (#3741, related to #3618). Thanks @BUKOWSKIREAL!
